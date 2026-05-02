@@ -1,83 +1,498 @@
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
+/* ── Reset & base ─────────────────────────────────────────────────────────── */
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:var(--font-sans);background:transparent}
-#app{padding:1.5rem 0}
-.hdr{display:flex;align-items:center;gap:12px;margin-bottom:1.5rem}
-.hdr-icon{width:36px;height:36px;border-radius:var(--border-radius-md);background:var(--color-background-info);display:flex;align-items:center;justify-content:center}
-.hdr h1{font-size:18px;font-weight:500;color:var(--color-text-primary)}
-.hdr p{font-size:13px;color:var(--color-text-secondary);margin-top:2px}
-.upload-zone{border:1.5px dashed var(--color-border-secondary);border-radius:var(--border-radius-lg);padding:3rem 2rem;text-align:center;cursor:pointer;transition:background 0.15s;background:var(--color-background-secondary)}
-.upload-zone:hover{background:var(--color-background-tertiary)}
-.upload-zone.drag{border-color:var(--color-border-info);background:var(--color-background-info)}
-.upload-icon{width:48px;height:48px;margin:0 auto 1rem;border-radius:50%;background:var(--color-background-tertiary);display:flex;align-items:center;justify-content:center}
-.upload-zone h2{font-size:16px;font-weight:500;color:var(--color-text-primary);margin-bottom:.5rem}
-.upload-zone p{font-size:13px;color:var(--color-text-secondary)}
+
+/* Custom property overrides — keep using the host's vars where sensible,
+   but layer our own design tokens on top for everything visual */
+:root{
+  --c-ink:       #0f1117;
+  --c-ink-soft:  #3a3f4d;
+  --c-ink-muted: #6b7280;
+  --c-ink-ghost: #9ca3af;
+  --c-surface:   #f8f9fb;
+  --c-surface-2: #f0f2f5;
+  --c-surface-3: #e5e8ed;
+  --c-border:    rgba(15,17,23,0.09);
+  --c-border-strong: rgba(15,17,23,0.16);
+  --c-pass:   #16a34a;
+  --c-pass-bg:#dcfce7;
+  --c-fail:   #dc2626;
+  --c-fail-bg:#fee2e2;
+  --c-warn:   #d97706;
+  --c-warn-bg:#fef3c7;
+  --c-accent: #2563eb;
+  --c-accent-bg:#dbeafe;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 20px;
+  --shadow-xs: 0 1px 2px rgba(0,0,0,.04), 0 0 0 1px rgba(0,0,0,.04);
+  --shadow-sm: 0 2px 8px rgba(0,0,0,.06), 0 0 0 1px rgba(0,0,0,.04);
+  --shadow-md: 0 4px 20px rgba(0,0,0,.08), 0 0 0 1px rgba(0,0,0,.04);
+  --font-body: 'DM Sans', var(--font-sans, system-ui), sans-serif;
+  --font-mono: 'DM Mono', monospace;
+}
+
+body{
+  font-family: var(--font-body);
+  background: transparent;
+  color: var(--c-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── App shell ────────────────────────────────────────────────────────────── */
+#app{
+  padding: 1.25rem 1rem 2rem;
+  max-width: 860px;
+  margin: 0 auto;
+  animation: fadeUp .35s ease both;
+}
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(10px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.hdr{
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 1.75rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--c-border);
+}
+.hdr-icon{
+  width: 40px; height: 40px;
+  border-radius: var(--r-md);
+  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+  box-shadow: 0 2px 8px rgba(37,99,235,.35);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.hdr h1{
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -.3px;
+  color: var(--c-ink);
+  line-height: 1.2;
+}
+.hdr p{
+  font-size: 12.5px;
+  color: var(--c-ink-muted);
+  margin-top: 3px;
+  font-weight: 300;
+}
+
+/* ── Upload zone ──────────────────────────────────────────────────────────── */
+.upload-zone{
+  position: relative;
+  border: 1.5px dashed var(--c-border-strong);
+  border-radius: var(--r-xl);
+  padding: 3.25rem 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .2s, background .2s, box-shadow .2s;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(37,99,235,.04) 0%, transparent 60%),
+    var(--c-surface);
+  /* subtle dot-grid texture */
+  background-image:
+    radial-gradient(circle, rgba(37,99,235,.04) 0%, transparent 60%),
+    radial-gradient(var(--c-border) 1px, transparent 1px);
+  background-size: 100% 100%, 20px 20px;
+  background-position: center, 0 0;
+  overflow: hidden;
+}
+.upload-zone::after{
+  content:'';
+  position:absolute;inset:0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(37,99,235,.03) 0%, transparent 50%);
+  pointer-events: none;
+}
+.upload-zone:hover{
+  border-color: var(--c-accent);
+  background-color: var(--c-surface);
+  box-shadow: 0 0 0 4px rgba(37,99,235,.07);
+}
+.upload-zone.drag{
+  border-color: var(--c-accent);
+  background-color: rgba(37,99,235,.04);
+  box-shadow: 0 0 0 6px rgba(37,99,235,.1);
+}
+.upload-icon{
+  width: 52px; height: 52px;
+  margin: 0 auto 1.1rem;
+  border-radius: 50%;
+  background: white;
+  box-shadow: var(--shadow-sm);
+  display: flex; align-items: center; justify-content: center;
+}
+.upload-zone h2{
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--c-ink);
+  margin-bottom: .4rem;
+  letter-spacing: -.2px;
+}
+.upload-zone p{font-size: 13px; color: var(--c-ink-muted); font-weight:300}
 .upload-zone input{display:none}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:transparent;font-family:var(--font-sans);font-size:13px;cursor:pointer;color:var(--color-text-primary);transition:background 0.12s}
-.btn:hover{background:var(--color-background-secondary)}
-.btn.primary{background:var(--color-text-primary);color:var(--color-background-primary);border-color:var(--color-text-primary)}
-.btn.primary:hover{opacity:0.85}
-.btn:disabled{opacity:0.45;cursor:not-allowed}
-.progress-wrap{margin:1.5rem 0}
-.progress-bar-bg{height:6px;border-radius:3px;background:var(--color-background-tertiary);overflow:hidden;margin:8px 0}
-.progress-bar{height:100%;border-radius:3px;background:var(--color-text-info);transition:width 0.3s}
-.progress-label{font-size:12px;color:var(--color-text-secondary)}
-.summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.5rem}
-.summary-card{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:.75rem 1rem;text-align:center}
-.summary-card .num{font-size:22px;font-weight:500;line-height:1}
-.summary-card .lbl{font-size:11px;color:var(--color-text-secondary);margin-top:4px;text-transform:uppercase;letter-spacing:.05em}
-.pass-num{color:var(--color-text-success)}
-.fail-num{color:var(--color-text-danger)}
-.warn-num{color:var(--color-text-warning)}
-.section{border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);margin-bottom:1rem;overflow:hidden}
-.section-hdr{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;background:var(--color-background-secondary);cursor:pointer;user-select:none}
-.section-hdr h3{font-size:14px;font-weight:500;color:var(--color-text-primary)}
-.section-hdr .badges{display:flex;gap:6px;align-items:center}
-.badge{font-size:11px;padding:2px 8px;border-radius:100px;font-weight:500}
-.badge-pass{background:var(--color-background-success);color:var(--color-text-success)}
-.badge-fail{background:var(--color-background-danger);color:var(--color-text-danger)}
-.badge-warn{background:var(--color-background-warning);color:var(--color-text-warning)}
-.badge-manual{background:var(--color-background-tertiary);color:var(--color-text-secondary)}
-.chevron{font-size:12px;color:var(--color-text-tertiary);transition:transform 0.2s}
-.chevron.open{transform:rotate(180deg)}
-.section-body{padding:.75rem 1rem;border-top:0.5px solid var(--color-border-tertiary)}
-.check-item{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start;padding:.6rem 0;border-bottom:0.5px solid var(--color-border-tertiary)}
-.check-item:last-child{border-bottom:none}
-.status-dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0}
-.dot-pass{background:var(--color-text-success)}
-.dot-fail{background:var(--color-text-danger)}
-.dot-warn{background:var(--color-text-warning)}
-.dot-manual{background:var(--color-text-tertiary)}
-.check-title{font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:2px}
-.check-detail{font-size:12px;color:var(--color-text-secondary);line-height:1.5}
-.check-wcag{font-size:11px;color:var(--color-text-tertiary);margin-top:2px}
-.issue-item{background:var(--color-background-danger);border-radius:var(--border-radius-md);padding:.5rem .75rem;margin-top:.5rem}
-.issue-item .issue-loc{font-size:11px;font-weight:500;color:var(--color-text-danger);margin-bottom:2px}
-.issue-item .issue-desc{font-size:12px;color:var(--color-text-danger)}
-.issue-item .issue-fix{font-size:11px;color:var(--color-text-secondary);margin-top:3px;font-style:italic}
-.warn-item{background:var(--color-background-warning);border-radius:var(--border-radius-md);padding:.5rem .75rem;margin-top:.5rem}
-.warn-item .issue-loc{font-size:11px;font-weight:500;color:var(--color-text-warning)}
-.warn-item .issue-desc{font-size:12px;color:var(--color-text-warning)}
-.warn-item .issue-fix{font-size:11px;color:var(--color-text-secondary);margin-top:3px;font-style:italic}
-.actions{display:flex;gap:8px;margin-top:1rem;flex-wrap:wrap}
-.filter-bar{display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap}
-.filter-btn{font-size:12px;padding:4px 12px;border-radius:100px;border:0.5px solid var(--color-border-secondary);background:transparent;cursor:pointer;font-family:var(--font-sans);color:var(--color-text-secondary);transition:all 0.12s}
-.filter-btn.active{background:var(--color-text-primary);color:var(--color-background-primary);border-color:var(--color-text-primary)}
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+.btn{
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--c-border-strong);
+  background: white;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--c-ink-soft);
+  transition: background .15s, box-shadow .15s, border-color .15s, color .15s;
+  box-shadow: var(--shadow-xs);
+  letter-spacing: -.1px;
+}
+.btn:hover{
+  background: var(--c-surface);
+  border-color: var(--c-border-strong);
+  color: var(--c-ink);
+  box-shadow: var(--shadow-sm);
+}
+.btn.primary{
+  background: var(--c-ink);
+  color: white;
+  border-color: var(--c-ink);
+  box-shadow: 0 2px 8px rgba(15,17,23,.2);
+}
+.btn.primary:hover{
+  background: var(--c-ink-soft);
+  border-color: var(--c-ink-soft);
+  box-shadow: 0 4px 14px rgba(15,17,23,.25);
+}
+.btn:disabled{
+  opacity: .38;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ── Progress ─────────────────────────────────────────────────────────────── */
+.progress-wrap{margin: 1.75rem 0}
+.progress-bar-bg{
+  height: 5px;
+  border-radius: 100px;
+  background: var(--c-surface-3);
+  overflow: hidden;
+  margin: 8px 0;
+}
+.progress-bar{
+  height: 100%;
+  border-radius: 100px;
+  background: linear-gradient(90deg, #2563eb 0%, #60a5fa 100%);
+  transition: width .4s cubic-bezier(.4,0,.2,1);
+  box-shadow: 0 0 8px rgba(37,99,235,.4);
+}
+.progress-label{
+  font-size: 12px;
+  color: var(--c-ink-muted);
+  font-weight: 400;
+}
+
+/* ── Summary cards ────────────────────────────────────────────────────────── */
+.summary-grid{
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 10px;
+  margin-bottom: 1.5rem;
+}
+.summary-card{
+  background: white;
+  border-radius: var(--r-lg);
+  padding: .9rem 1rem 1rem;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--c-border);
+  transition: box-shadow .2s;
+  animation: fadeUp .4s ease both;
+}
+.summary-card:nth-child(2){animation-delay:.05s}
+.summary-card:nth-child(3){animation-delay:.1s}
+.summary-card:hover{box-shadow: var(--shadow-md)}
+.summary-card .num{
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -1px;
+  font-variant-numeric: tabular-nums;
+}
+.summary-card .lbl{
+  font-size: 10.5px;
+  color: var(--c-ink-ghost);
+  margin-top: 5px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-weight: 500;
+}
+.pass-num{color: var(--c-pass)}
+.fail-num{color: var(--c-fail)}
+.warn-num{color: var(--c-warn)}
+
+/* ── Sections ─────────────────────────────────────────────────────────────── */
+.section{
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  margin-bottom: .65rem;
+  overflow: hidden;
+  background: white;
+  box-shadow: var(--shadow-xs);
+  transition: box-shadow .2s;
+}
+.section:hover{box-shadow: var(--shadow-sm)}
+
+.section-hdr{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .85rem 1.1rem;
+  background: var(--c-surface);
+  cursor: pointer;
+  user-select: none;
+  transition: background .15s;
+  gap: 10px;
+}
+.section-hdr:hover{background: var(--c-surface-2)}
+.section-hdr h3{
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--c-ink);
+  letter-spacing: -.15px;
+}
+.section-hdr .badges{
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  flex-shrink: 0;
+}
+.badge{
+  font-size: 10.5px;
+  padding: 2px 8px;
+  border-radius: 100px;
+  font-weight: 600;
+  letter-spacing: .01em;
+}
+.badge-pass{background: var(--c-pass-bg); color: var(--c-pass)}
+.badge-fail{background: var(--c-fail-bg); color: var(--c-fail)}
+.badge-warn{background: var(--c-warn-bg); color: var(--c-warn)}
+.badge-manual{background: var(--c-surface-3); color: var(--c-ink-muted)}
+
+.chevron{
+  font-size: 10px;
+  color: var(--c-ink-ghost);
+  transition: transform .25s cubic-bezier(.4,0,.2,1);
+  flex-shrink: 0;
+}
+.chevron.open{transform: rotate(180deg)}
+
+.section-body{
+  padding: .75rem 1.1rem;
+  border-top: 1px solid var(--c-border);
+}
+
+/* ── Check items ──────────────────────────────────────────────────────────── */
+.check-item{
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: .7rem 0;
+  border-bottom: 1px solid var(--c-border);
+}
+.check-item:last-child{border-bottom: none}
+
+/* ── Status icons (replaces dots) ─────────────────────────────────────────── */
+.status-icon{
+  width: 18px; height: 18px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  display: flex; align-items: center; justify-content: center;
+}
+/* Keep dot classes in place so no JS breaks, but they're now hidden — icons render via renderCheck() */
+.status-dot{ display: none; }
+
+.check-title{
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--c-ink);
+  margin-bottom: 2px;
+  letter-spacing: -.1px;
+}
+.check-detail{
+  font-size: 12px;
+  color: var(--c-ink-muted);
+  line-height: 1.6;
+  font-weight: 300;
+}
+.check-wcag{
+  font-size: 10.5px;
+  color: var(--c-ink-ghost);
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  letter-spacing: .02em;
+}
+
+/* ── Issue / warning cards ────────────────────────────────────────────────── */
+.issue-item, .warn-item{
+  border-radius: var(--r-sm);
+  padding: .55rem .8rem;
+  margin-top: .45rem;
+  border-left: 2.5px solid transparent;
+}
+.issue-item{
+  background: #fff5f5;
+  border-color: var(--c-fail);
+}
+.warn-item{
+  background: #fffbeb;
+  border-color: var(--c-warn);
+}
+
+.issue-item .issue-loc,
+.warn-item .issue-loc{
+  font-size: 10.5px;
+  font-weight: 600;
+  margin-bottom: 2px;
+  font-family: var(--font-mono);
+  letter-spacing: .02em;
+}
+.issue-item .issue-loc{color: var(--c-fail)}
+.warn-item .issue-loc{color: var(--c-warn)}
+
+.issue-item .issue-desc,
+.warn-item .issue-desc{font-size: 12px; line-height: 1.55; font-weight: 400}
+.issue-item .issue-desc{color: #991b1b}
+.warn-item .issue-desc{color: #92400e}
+
+.issue-item .issue-fix,
+.warn-item .issue-fix{
+  font-size: 11px;
+  color: var(--c-ink-muted);
+  margin-top: 4px;
+  font-style: italic;
+  line-height: 1.5;
+}
+
+/* ── Actions & filters ────────────────────────────────────────────────────── */
+.actions{display: flex; gap: 8px; margin-top: 1.25rem; flex-wrap: wrap}
+
+.filter-bar{
+  display: flex;
+  gap: 5px;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  padding: .3rem;
+  background: var(--c-surface-2);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--c-border);
+  width: fit-content;
+}
+.filter-btn{
+  font-size: 12px;
+  padding: 5px 13px;
+  border-radius: var(--r-md);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-weight: 500;
+  color: var(--c-ink-muted);
+  transition: all .15s;
+  letter-spacing: -.1px;
+}
+.filter-btn:hover{color: var(--c-ink); background: white}
+.filter-btn.active{
+  background: white;
+  color: var(--c-ink);
+  box-shadow: var(--shadow-xs);
+}
+
+/* ── Visibility ───────────────────────────────────────────────────────────── */
 #results{display:none}
 #upload-area{display:block}
-.file-info{display:flex;align-items:center;gap:10px;padding:.75rem 1rem;background:var(--color-background-secondary);border-radius:var(--border-radius-md);margin-top:1rem}
-.file-info p{font-size:13px;color:var(--color-text-primary)}
-.file-info span{font-size:12px;color:var(--color-text-secondary)}
-/* Color swatch inline display for contrast issues */
-.contrast-swatch{display:inline-flex;align-items:center;gap:5px;margin-top:4px}
-.swatch-box{width:14px;height:14px;border-radius:3px;border:1px solid rgba(0,0,0,0.15);display:inline-block;flex-shrink:0}
-.contrast-ratio-pill{font-size:10px;font-weight:600;padding:1px 6px;border-radius:100px;background:rgba(0,0,0,0.08)}
+
+/* ── File info ────────────────────────────────────────────────────────────── */
+.file-info{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: .85rem 1rem;
+  background: white;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--c-border);
+  box-shadow: var(--shadow-xs);
+  margin-top: 1rem;
+}
+.file-info p{font-size: 13px; color: var(--c-ink); font-weight: 500}
+.file-info span{font-size: 12px; color: var(--c-ink-muted)}
+.file-close-btn{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--c-border-strong);
+  background: white;
+  color: var(--c-ink-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background .15s, color .15s, border-color .15s;
+  box-shadow: var(--shadow-xs);
+}
+.file-close-btn:hover{
+  background: var(--c-fail-bg);
+  color: var(--c-fail);
+  border-color: rgba(220,38,38,.25);
+}
+
+/* ── Contrast swatches ────────────────────────────────────────────────────── */
+.contrast-swatch{
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 5px;
+  padding: 3px 7px 3px 4px;
+  background: rgba(0,0,0,.04);
+  border-radius: 100px;
+  width: fit-content;
+}
+.swatch-box{
+  width: 12px; height: 12px;
+  border-radius: 3px;
+  border: 1px solid rgba(0,0,0,.12);
+  display: inline-block;
+  flex-shrink: 0;
+}
+.contrast-ratio-pill{
+  font-size: 10px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--c-ink-soft);
+  letter-spacing: .01em;
+}
+
+/* ── sr-only ──────────────────────────────────────────────────────────────── */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 </style>
 <h2 class="sr-only">Canvas IMSCC Accessibility Checker — upload a zip file to audit your course shell for WCAG 2.1 AA compliance.</h2>
 <div id="app">
   <div class="hdr">
     <div class="hdr-icon">
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2L3 6v4c0 4.4 3 8.5 7 9.9 4-1.4 7-5.5 7-9.9V6l-7-4z" stroke="var(--color-text-info)" stroke-width="1.5" fill="none"/><path d="M7 10l2 2 4-4" stroke="var(--color-text-info)" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2L3 6v4c0 4.4 3 8.5 7 9.9 4-1.4 7-5.5 7-9.9V6l-7-4z" stroke="white" stroke-width="1.5" fill="rgba(255,255,255,.15)"/><path d="M7 10l2 2 4-4" stroke="white" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </div>
     <div>
       <h1>Canvas Accessibility Checker</h1>
@@ -97,12 +512,19 @@ body{font-family:var(--font-sans);background:transparent}
     </div>
     <div id="file-preview" style="display:none">
       <div class="file-info">
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M13 2H6a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7l-3-5z" stroke="var(--color-text-secondary)" stroke-width="1.5"/><polyline points="13 2 13 7 18 7" stroke="var(--color-text-secondary)" stroke-width="1.5"/></svg>
-        <div><p id="file-name">file.imscc</p><span id="file-size"></span></div>
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M13 2H6a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7l-3-5z" stroke="var(--c-ink-muted)" stroke-width="1.5"/><polyline points="13 2 13 7 18 7" stroke="var(--c-ink-muted)" stroke-width="1.5"/></svg>
+        <div style="flex:1;min-width:0">
+          <p id="file-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">file.imscc</p>
+          <span id="file-size"></span>
+        </div>
+        <button class="file-close-btn" onclick="resetTool()" aria-label="Remove file">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+          </svg>
+        </button>
       </div>
       <div style="display:flex;gap:8px;margin-top:1rem">
         <button class="btn primary" id="run-btn" onclick="runAudit()">Run accessibility audit</button>
-        <button class="btn" onclick="resetTool()">Change file</button>
       </div>
     </div>
     <div id="progress-area" style="display:none">
@@ -732,15 +1154,32 @@ function renderSections() {
 }
 
 function renderCheck(c) {
-  const dotClass = c.status==='pass'?'dot-pass':c.status==='fail'?'dot-fail':c.status==='warn'?'dot-warn':'dot-manual';
+  // SVG icons for each status — red X for fail, yellow ! for warn, green ✓ for pass
+  const icons = {
+    pass: `<svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="8.25" fill="#dcfce7" stroke="#16a34a" stroke-width="1.25"/>
+      <path d="M5.5 9l2.5 2.5 4.5-4.5" stroke="#16a34a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`,
+    fail: `<svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="8.25" fill="#fee2e2" stroke="#dc2626" stroke-width="1.25"/>
+      <path d="M6 6l6 6M12 6l-6 6" stroke="#dc2626" stroke-width="1.6" stroke-linecap="round"/>
+    </svg>`,
+    warn: `<svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="8.25" fill="#fef3c7" stroke="#d97706" stroke-width="1.25"/>
+      <path d="M9 5.5v4" stroke="#d97706" stroke-width="1.7" stroke-linecap="round"/>
+      <circle cx="9" cy="12.5" r=".9" fill="#d97706"/>
+    </svg>`
+  };
+  const icon = icons[c.status] || icons.warn;
+
   const issueHtml = (c.issues||[]).map(i => {
     // For contrast issues, show color swatches inline
     const swatchHtml = (i.fgHex && i.bgHex)
       ? `<div class="contrast-swatch">
            <span class="swatch-box" style="background:${i.bgHex}" title="Background: ${i.bgHex}"></span>
-           <span style="font-size:10px;color:var(--color-text-tertiary)">BG</span>
+           <span style="font-size:10px;color:var(--c-ink-ghost)">BG</span>
            <span class="swatch-box" style="background:${i.fgHex}" title="Foreground: ${i.fgHex}"></span>
-           <span style="font-size:10px;color:var(--color-text-tertiary)">FG</span>
+           <span style="font-size:10px;color:var(--c-ink-ghost)">FG</span>
            <span class="contrast-ratio-pill">${i.ratio}:1 (need ${i.threshold}:1)</span>
          </div>`
       : '';
@@ -751,8 +1190,9 @@ function renderCheck(c) {
       ${i.fix?`<div class="issue-fix">Suggestion: ${i.fix}</div>`:''}
     </div>`;
   }).join('');
+
   return `<div class="check-item">
-    <div class="status-dot ${dotClass}"></div>
+    <div class="status-icon">${icon}</div>
     <div>
       <div class="check-title">${c.title}</div>
       ${c.detail?`<div class="check-detail">${c.detail}</div>`:''}

@@ -1,4 +1,3 @@
-
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:var(--font-sans);background:transparent}
@@ -69,6 +68,10 @@ body{font-family:var(--font-sans);background:transparent}
 .file-info{display:flex;align-items:center;gap:10px;padding:.75rem 1rem;background:var(--color-background-secondary);border-radius:var(--border-radius-md);margin-top:1rem}
 .file-info p{font-size:13px;color:var(--color-text-primary)}
 .file-info span{font-size:12px;color:var(--color-text-secondary)}
+/* Color swatch inline display for contrast issues */
+.contrast-swatch{display:inline-flex;align-items:center;gap:5px;margin-top:4px}
+.swatch-box{width:14px;height:14px;border-radius:3px;border:1px solid rgba(0,0,0,0.15);display:inline-block;flex-shrink:0}
+.contrast-ratio-pill{font-size:10px;font-weight:600;padding:1px 6px;border-radius:100px;background:rgba(0,0,0,0.08)}
 </style>
 <h2 class="sr-only">Canvas IMSCC Accessibility Checker — upload a zip file to audit your course shell for WCAG 2.1 AA compliance.</h2>
 <div id="app">
@@ -194,12 +197,12 @@ async function runAudit() {
     const xmlDoc = manifest ? parser.parseFromString(manifest, 'text/xml') : null;
 
     const pages = await extractPages(zip);
-    setProgress(50, 'Scanning HTML content for accessibility issues...');
+    setProgress(45, 'Scanning HTML content for accessibility issues...');
     await sleep(300);
 
     const mediaFiles = Object.keys(zip.files).filter(k => /\.(mp4|mov|avi|mp3|wav|ogg|webm)$/i.test(k));
     const imageFiles = Object.keys(zip.files).filter(k => /\.(jpg|jpeg|png|gif|svg|webp|bmp)$/i.test(k));
-    setProgress(70, 'Checking images, media, and links...');
+    setProgress(60, 'Checking color contrast ratios...');
     await sleep(300);
 
     auditData = await performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc);
@@ -243,29 +246,247 @@ function inferModule(path) {
   return 'Root';
 }
 
+// ─── COLOR CONTRAST ENGINE ────────────────────────────────────────────────────
+//
+// WCAG 2.1 SC 1.4.3 requires:
+//   • Normal text:  contrast ratio ≥ 4.5:1
+//   • Large text (≥18pt / ≥14pt bold): contrast ratio ≥ 3:1
+//
+// We implement the full WCAG relative-luminance formula:
+//   L = 0.2126·R + 0.7152·G + 0.0722·B
+// where each channel is first linearized via:
+//   c_lin = (c/255 ≤ 0.04045) ? c/255/12.92 : ((c/255+0.055)/1.055)^2.4
+//
+// Then contrast ratio = (L_lighter + 0.05) / (L_darker + 0.05)
+
+/** Named CSS colors → hex. Covers the ~150 standard CSS named colors. */
+const CSS_NAMED_COLORS = {
+  aliceblue:'#f0f8ff',antiquewhite:'#faebd7',aqua:'#00ffff',aquamarine:'#7fffd4',
+  azure:'#f0ffff',beige:'#f5f5dc',bisque:'#ffe4c4',black:'#000000',blanchedalmond:'#ffebcd',
+  blue:'#0000ff',blueviolet:'#8a2be2',brown:'#a52a2a',burlywood:'#deb887',cadetblue:'#5f9ea0',
+  chartreuse:'#7fff00',chocolate:'#d2691e',coral:'#ff7f50',cornflowerblue:'#6495ed',
+  cornsilk:'#fff8dc',crimson:'#dc143c',cyan:'#00ffff',darkblue:'#00008b',darkcyan:'#008b8b',
+  darkgoldenrod:'#b8860b',darkgray:'#a9a9a9',darkgreen:'#006400',darkgrey:'#a9a9a9',
+  darkkhaki:'#bdb76b',darkmagenta:'#8b008b',darkolivegreen:'#556b2f',darkorange:'#ff8c00',
+  darkorchid:'#9932cc',darkred:'#8b0000',darksalmon:'#e9967a',darkseagreen:'#8fbc8f',
+  darkslateblue:'#483d8b',darkslategray:'#2f4f4f',darkslategrey:'#2f4f4f',darkturquoise:'#00ced1',
+  darkviolet:'#9400d3',deeppink:'#ff1493',deepskyblue:'#00bfff',dimgray:'#696969',
+  dimgrey:'#696969',dodgerblue:'#1e90ff',firebrick:'#b22222',floralwhite:'#fffaf0',
+  forestgreen:'#228b22',fuchsia:'#ff00ff',gainsboro:'#dcdcdc',ghostwhite:'#f8f8ff',
+  gold:'#ffd700',goldenrod:'#daa520',gray:'#808080',green:'#008000',greenyellow:'#adff2f',
+  grey:'#808080',honeydew:'#f0fff0',hotpink:'#ff69b4',indianred:'#cd5c5c',indigo:'#4b0082',
+  ivory:'#fffff0',khaki:'#f0e68c',lavender:'#e6e6fa',lavenderblush:'#fff0f5',lawngreen:'#7cfc00',
+  lemonchiffon:'#fffacd',lightblue:'#add8e6',lightcoral:'#f08080',lightcyan:'#e0ffff',
+  lightgoldenrodyellow:'#fafad2',lightgray:'#d3d3d3',lightgreen:'#90ee90',lightgrey:'#d3d3d3',
+  lightpink:'#ffb6c1',lightsalmon:'#ffa07a',lightseagreen:'#20b2aa',lightskyblue:'#87cefa',
+  lightslategray:'#778899',lightslategrey:'#778899',lightsteelblue:'#b0c4de',lightyellow:'#ffffe0',
+  lime:'#00ff00',limegreen:'#32cd32',linen:'#faf0e6',magenta:'#ff00ff',maroon:'#800000',
+  mediumaquamarine:'#66cdaa',mediumblue:'#0000cd',mediumorchid:'#ba55d3',mediumpurple:'#9370db',
+  mediumseagreen:'#3cb371',mediumslateblue:'#7b68ee',mediumspringgreen:'#00fa9a',
+  mediumturquoise:'#48d1cc',mediumvioletred:'#c71585',midnightblue:'#191970',mintcream:'#f5fffa',
+  mistyrose:'#ffe4e1',moccasin:'#ffe4b5',navajowhite:'#ffdead',navy:'#000080',oldlace:'#fdf5e6',
+  olive:'#808000',olivedrab:'#6b8e23',orange:'#ffa500',orangered:'#ff4500',orchid:'#da70d6',
+  palegoldenrod:'#eee8aa',palegreen:'#98fb98',paleturquoise:'#afeeee',palevioletred:'#db7093',
+  papayawhip:'#ffefd5',peachpuff:'#ffdab9',peru:'#cd853f',pink:'#ffc0cb',plum:'#dda0dd',
+  powderblue:'#b0e0e6',purple:'#800080',rebeccapurple:'#663399',red:'#ff0000',rosybrown:'#bc8f8f',
+  royalblue:'#4169e1',saddlebrown:'#8b4513',salmon:'#fa8072',sandybrown:'#f4a460',seagreen:'#2e8b57',
+  seashell:'#fff5ee',sienna:'#a0522d',silver:'#c0c0c0',skyblue:'#87ceeb',slateblue:'#6a5acd',
+  slategray:'#708090',slategrey:'#708090',snow:'#fffafa',springgreen:'#00ff7f',steelblue:'#4682b4',
+  tan:'#d2b48c',teal:'#008080',thistle:'#d8bfd8',tomato:'#ff6347',turquoise:'#40e0d0',
+  violet:'#ee82ee',wheat:'#f5deb3',white:'#ffffff',whitesmoke:'#f5f5f5',yellow:'#ffff00',
+  yellowgreen:'#9acd32'
+};
+
+/**
+ * Parse any CSS color string into {r, g, b} (0-255 each).
+ * Handles: #rgb, #rrggbb, #rrggbbaa, rgb(), rgba(), named colors.
+ * Returns null if the color cannot be parsed (e.g. "transparent", "inherit").
+ */
+function parseCssColor(raw) {
+  if (!raw) return null;
+  const s = raw.trim().toLowerCase();
+  if (s === 'transparent' || s === 'inherit' || s === 'initial' || s === 'currentcolor') return null;
+
+  // Named color lookup
+  if (CSS_NAMED_COLORS[s]) return parseCssColor(CSS_NAMED_COLORS[s]);
+
+  // #rgb shorthand → #rrggbb
+  if (/^#[0-9a-f]{3}$/i.test(s)) {
+    return { r: parseInt(s[1]+s[1],16), g: parseInt(s[2]+s[2],16), b: parseInt(s[3]+s[3],16) };
+  }
+  // #rrggbb or #rrggbbaa
+  if (/^#[0-9a-f]{6,8}$/i.test(s)) {
+    return { r: parseInt(s.slice(1,3),16), g: parseInt(s.slice(3,5),16), b: parseInt(s.slice(5,7),16) };
+  }
+  // rgb(r, g, b) or rgba(r, g, b, a)
+  const m = s.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+  if (m) return { r: +m[1], g: +m[2], b: +m[3] };
+
+  return null;
+}
+
+/**
+ * Convert an sRGB channel (0-255) to its linearized value.
+ * This is the IEC 61966-2-1 formula required by WCAG.
+ */
+function linearize(c) {
+  const s = c / 255;
+  return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+}
+
+/**
+ * Compute relative luminance of an {r,g,b} color per WCAG 2.x.
+ * Result is in [0, 1] where 0 = black and 1 = white.
+ */
+function relativeLuminance({ r, g, b }) {
+  return 0.2126 * linearize(r) + 0.7152 * linearize(g) + 0.0722 * linearize(b);
+}
+
+/**
+ * Compute WCAG contrast ratio between two {r,g,b} colors.
+ * Always returns a value ≥ 1 (lighter / darker + offset).
+ */
+function contrastRatio(fg, bg) {
+  const L1 = relativeLuminance(fg);
+  const L2 = relativeLuminance(bg);
+  const lighter = Math.max(L1, L2);
+  const darker  = Math.min(L1, L2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+/**
+ * Format {r,g,b} as #rrggbb for display / PDF.
+ */
+function toHex({ r, g, b }) {
+  return '#' + [r,g,b].map(x => x.toString(16).padStart(2,'0')).join('');
+}
+
+/**
+ * Extract inline style properties from a DOM element parsed by DOMParser.
+ * DOMParser does populate element.style for inline styles.
+ */
+function getInlineColor(el, prop) {
+  // el.style is available from DOMParser in modern browsers
+  const val = el.style && el.style.getPropertyValue ? el.style.getPropertyValue(prop) : '';
+  return val ? parseCssColor(val) : null;
+}
+
+/**
+ * Determine whether a font size (in CSS) qualifies as "large text" under WCAG.
+ * Large text = ≥18pt (24px) regular, or ≥14pt (≈18.67px) bold.
+ *   → threshold 4.5:1 applies to normal text; 3:1 applies to large text.
+ */
+function isLargeText(el) {
+  const style = el.style || {};
+  const fs = style.fontSize || '';
+  const fw = style.fontWeight || '';
+  const bold = fw === 'bold' || fw === '700' || fw === '800' || fw === '900';
+  const tag = el.tagName ? el.tagName.toLowerCase() : '';
+  // h1/h2 are always large; h3 bold counts as large
+  if (tag === 'h1' || tag === 'h2') return true;
+  if ((tag === 'h3' || bold) && tag.match(/^h[1-6]$/)) return true;
+  // Parse px/pt sizes
+  const pxMatch = fs.match(/([\d.]+)px/);
+  const ptMatch = fs.match(/([\d.]+)pt/);
+  const sizePx = pxMatch ? +pxMatch[1] : ptMatch ? +ptMatch[1] * 1.333 : 0;
+  if (sizePx >= 24) return true;
+  if (bold && sizePx >= 18.67) return true;
+  return false;
+}
+
+/**
+ * Walk ancestor chain (within the parsed doc) to find the nearest explicit
+ * background color. Canvas pages default to a white (#ffffff) background,
+ * so we use that as the ultimate fallback.
+ *
+ * We check both `background-color` and the `background` shorthand.
+ */
+function resolveBackground(el) {
+  let node = el;
+  while (node && node.tagName) {
+    const bg = getInlineColor(node, 'background-color') || getInlineColor(node, 'background');
+    if (bg) return bg;
+    node = node.parentElement;
+  }
+  // Canvas default: white
+  return { r: 255, g: 255, b: 255 };
+}
+
+/**
+ * Scan all text-bearing elements in a parsed HTML document for color-contrast
+ * violations. Returns an array of issue objects.
+ *
+ * Strategy:
+ *   1. Walk every element that can contain visible text.
+ *   2. If it has an inline `color` style, pair it with the resolved background.
+ *   3. Compute contrast ratio and compare against the WCAG AA threshold.
+ *   4. Deduplicate: only report each unique fg+bg pair once per page location.
+ */
+function checkPageContrast(doc, loc) {
+  const issues = [];
+  // Selector covers all elements that may bear user-authored text color
+  const TEXT_TAGS = 'p,span,div,td,th,li,h1,h2,h3,h4,h5,h6,a,strong,em,b,i,label,caption,blockquote,pre,code,small,mark,s,del,ins';
+  const elements = doc.querySelectorAll(TEXT_TAGS);
+  const seen = new Set(); // deduplicate identical fg+bg combos within this page
+
+  elements.forEach(el => {
+    const fg = getInlineColor(el, 'color');
+    if (!fg) return; // no explicit color → inherits from parent, skip (can't resolve without getComputedStyle)
+
+    const bg = resolveBackground(el);
+    const key = `${toHex(fg)}|${toHex(bg)}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+
+    const ratio = contrastRatio(fg, bg);
+    const large = isLargeText(el);
+    const threshold = large ? 3.0 : 4.5;
+    const label = large ? 'large text (≥18pt / ≥14pt bold)' : 'normal text';
+
+    if (ratio < threshold) {
+      const snippet = (el.textContent || '').trim().substring(0, 50) || el.tagName;
+      issues.push({
+        loc,
+        issue: `Contrast ratio ${ratio.toFixed(2)}:1 — below ${threshold}:1 required for ${label}. Foreground: ${toHex(fg)}, Background: ${toHex(bg)}.`,
+        fix: `Adjust the text color or background so the contrast ratio is at least ${threshold}:1. Current: ${toHex(fg)} on ${toHex(bg)} (ratio ${ratio.toFixed(2)}:1). Try a darker text or lighter background.`,
+        fgHex: toHex(fg),
+        bgHex: toHex(bg),
+        ratio: ratio.toFixed(2),
+        threshold,
+        snippet
+      });
+    }
+  });
+
+  return issues;
+}
+
+// ─── MAIN AUDIT ──────────────────────────────────────────────────────────────
+
 async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc) {
   const parser = new DOMParser();
   const results = { sections: [] };
-
-  const pageIssues = { titles: [], headings: [], links: [], altText: [], colorContrast: [], tableHeaders: [], readingOrder: [] };
-  const mediaIssues = { captions: [], transcripts: [], audiodesc: [] };
-  const manualItems = [];
 
   let totalImages = 0, missingAlt = [], imagesOfText = [];
   let totalLinks = 0, badLinks = [];
   let missingTitles = [], missingHeadings = [];
   let tableIssues = [];
+  let contrastIssues = [];        // NEW: collected contrast failures
+  let contrastCheckedPages = 0;   // pages where we actually found styled color
+  let contrastInspectedElements = 0;
   let totalPages = pages.length;
 
   for (const page of pages) {
     const doc = parser.parseFromString(page.content, 'text/html');
     const loc = `${page.module} → ${page.name}`;
 
+    // Page titles
     const title = doc.querySelector('title');
     if (!title || !title.textContent.trim() || title.textContent.trim().toLowerCase() === 'untitled') {
       missingTitles.push({ loc, issue: 'Page has no descriptive title tag', fix: 'Add a unique, descriptive <title> that reflects the page content.' });
     }
 
+    // Images
     const imgs = doc.querySelectorAll('img');
     totalImages += imgs.length;
     imgs.forEach(img => {
@@ -281,6 +502,7 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc) {
       }
     });
 
+    // Links
     const links = doc.querySelectorAll('a');
     totalLinks += links.length;
     links.forEach(a => {
@@ -291,6 +513,7 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc) {
       }
     });
 
+    // Tables
     const tables = doc.querySelectorAll('table');
     tables.forEach(tbl => {
       const headers = tbl.querySelectorAll('th');
@@ -302,6 +525,7 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc) {
       }
     });
 
+    // Headings
     const headings = doc.querySelectorAll('h1,h2,h3,h4,h5,h6');
     if (headings.length === 0 && doc.body && doc.body.textContent.trim().length > 200) {
       missingHeadings.push({ loc, issue: 'Long content page has no heading structure', fix: 'Use HTML headings (H1–H3) to organize content into logical sections.' });
@@ -314,10 +538,55 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc) {
       }
       prevLevel = level;
     });
+
+    // ── Color Contrast (NEW) ──────────────────────────────────────────────
+    // Count styled elements so we can report coverage honestly
+    const styledEls = doc.querySelectorAll('[style*="color"]');
+    contrastInspectedElements += styledEls.length;
+    if (styledEls.length > 0) contrastCheckedPages++;
+
+    const pageContrastIssues = checkPageContrast(doc, loc);
+    contrastIssues.push(...pageContrastIssues);
   }
 
   const hasVideos = mediaFiles.filter(f => /\.(mp4|mov|avi|webm)$/i.test(f)).length;
-  const hasAudio = mediaFiles.filter(f => /\.(mp3|wav|ogg)$/i.test(f)).length;
+  const hasAudio  = mediaFiles.filter(f => /\.(mp3|wav|ogg)$/i.test(f)).length;
+
+  // ── Build contrast check entry ────────────────────────────────────────────
+  // We distinguish three cases:
+  //   • No inline color styles found → can only partially audit; manual check still needed
+  //   • Inline styles found, all pass → pass (with caveat)
+  //   • Failures found → fail
+  let contrastCheck;
+  if (contrastIssues.length > 0) {
+    contrastCheck = {
+      status: 'fail',
+      title: `${contrastIssues.length} color contrast failure(s) detected`,
+      detail: `Scanned ${contrastInspectedElements} inline-styled text element(s) across ${totalPages} page(s). ` +
+              `Failures shown below. Note: colors inherited via CSS classes (not inline styles) require manual verification with a browser tool such as the WebAIM Contrast Checker.`,
+      wcag: 'WCAG 1.4.3 Level AA',
+      issues: contrastIssues
+    };
+  } else if (contrastInspectedElements > 0) {
+    contrastCheck = {
+      status: 'pass',
+      title: `All ${contrastInspectedElements} inline-colored text element(s) pass contrast requirements`,
+      detail: `Checked ${contrastInspectedElements} element(s) with explicit color styling across ${contrastCheckedPages} page(s). ` +
+              `Colors defined via CSS classes (not inline styles) cannot be checked statically — verify those on live pages with the WebAIM Contrast Checker.`,
+      wcag: 'WCAG 1.4.3 Level AA',
+      issues: []
+    };
+  } else {
+    // No inline color styles at all — this is the manual-check fallback
+    contrastCheck = {
+      status: 'warn',
+      title: 'No inline color styles found — manual contrast check required',
+      detail: `No inline color styling was detected across ${totalPages} page(s). Canvas courses typically apply color through the LMS theme or rich-text CSS classes, which are not present in the exported HTML. ` +
+              `Verify contrast on live pages using the WebAIM Contrast Checker (target: 4.5:1 for normal text, 3:1 for large text ≥18pt or ≥14pt bold).`,
+      wcag: 'WCAG 1.4.3 Level AA',
+      issues: []
+    };
+  }
 
   results.sections = [
     {
@@ -349,7 +618,7 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc) {
     {
       id: 'color-contrast',
       label: 'Color contrast (WCAG 1.4.3)',
-      checks: [{ status: 'warn', title: 'Manual check required', detail: 'Color contrast ratios (4.5:1 for normal text, 3:1 for large text and UI elements) cannot be reliably computed from an IMSCC export without rendering. Use the WebAIM Contrast Checker on live pages.', wcag: 'WCAG 1.4.3 Level AA', issues: [] }]
+      checks: [contrastCheck]
     },
     {
       id: 'alt-text',
@@ -464,12 +733,24 @@ function renderSections() {
 
 function renderCheck(c) {
   const dotClass = c.status==='pass'?'dot-pass':c.status==='fail'?'dot-fail':c.status==='warn'?'dot-warn':'dot-manual';
-  const issueHtml = (c.issues||[]).map(i => `
-    <div class="${c.status==='fail'?'issue-item':'warn-item'}">
+  const issueHtml = (c.issues||[]).map(i => {
+    // For contrast issues, show color swatches inline
+    const swatchHtml = (i.fgHex && i.bgHex)
+      ? `<div class="contrast-swatch">
+           <span class="swatch-box" style="background:${i.bgHex}" title="Background: ${i.bgHex}"></span>
+           <span style="font-size:10px;color:var(--color-text-tertiary)">BG</span>
+           <span class="swatch-box" style="background:${i.fgHex}" title="Foreground: ${i.fgHex}"></span>
+           <span style="font-size:10px;color:var(--color-text-tertiary)">FG</span>
+           <span class="contrast-ratio-pill">${i.ratio}:1 (need ${i.threshold}:1)</span>
+         </div>`
+      : '';
+    return `<div class="${c.status==='fail'?'issue-item':'warn-item'}">
       <div class="issue-loc">${i.loc||'Manual check'}</div>
       <div class="issue-desc">${i.issue}</div>
+      ${swatchHtml}
       ${i.fix?`<div class="issue-fix">Suggestion: ${i.fix}</div>`:''}
-    </div>`).join('');
+    </div>`;
+  }).join('');
   return `<div class="check-item">
     <div class="status-dot ${dotClass}"></div>
     <div>
@@ -561,7 +842,11 @@ function downloadPDF() {
       for (const issue of (c.issues||[])) {
         if (y>265){doc.addPage();y=20;}
         doc.setFillColor(c.status==='fail'?255:255,c.status==='fail'?240:245,c.status==='fail'?240:220);
-        const issueLines = doc.splitTextToSize(`• ${issue.loc}: ${issue.issue}`,CW-10);
+        // For contrast issues, append hex values to the issue text for the PDF
+        const issueText = issue.fgHex
+          ? `• ${issue.loc}: ${issue.issue}`
+          : `• ${issue.loc}: ${issue.issue}`;
+        const issueLines = doc.splitTextToSize(issueText, CW-10);
         const fixLines = issue.fix ? doc.splitTextToSize(`  Suggestion: ${issue.fix}`,CW-10) : [];
         const blockH = (issueLines.length+fixLines.length)*4+4;
         doc.roundedRect(M+3,y-2,CW-6,blockH,1,1,'F');

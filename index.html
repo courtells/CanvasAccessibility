@@ -1,0 +1,595 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);background:transparent}
+#app{padding:1.5rem 0}
+.hdr{display:flex;align-items:center;gap:12px;margin-bottom:1.5rem}
+.hdr-icon{width:36px;height:36px;border-radius:var(--border-radius-md);background:var(--color-background-info);display:flex;align-items:center;justify-content:center}
+.hdr h1{font-size:18px;font-weight:500;color:var(--color-text-primary)}
+.hdr p{font-size:13px;color:var(--color-text-secondary);margin-top:2px}
+.upload-zone{border:1.5px dashed var(--color-border-secondary);border-radius:var(--border-radius-lg);padding:3rem 2rem;text-align:center;cursor:pointer;transition:background 0.15s;background:var(--color-background-secondary)}
+.upload-zone:hover{background:var(--color-background-tertiary)}
+.upload-zone.drag{border-color:var(--color-border-info);background:var(--color-background-info)}
+.upload-icon{width:48px;height:48px;margin:0 auto 1rem;border-radius:50%;background:var(--color-background-tertiary);display:flex;align-items:center;justify-content:center}
+.upload-zone h2{font-size:16px;font-weight:500;color:var(--color-text-primary);margin-bottom:.5rem}
+.upload-zone p{font-size:13px;color:var(--color-text-secondary)}
+.upload-zone input{display:none}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:transparent;font-family:var(--font-sans);font-size:13px;cursor:pointer;color:var(--color-text-primary);transition:background 0.12s}
+.btn:hover{background:var(--color-background-secondary)}
+.btn.primary{background:var(--color-text-primary);color:var(--color-background-primary);border-color:var(--color-text-primary)}
+.btn.primary:hover{opacity:0.85}
+.btn:disabled{opacity:0.45;cursor:not-allowed}
+.progress-wrap{margin:1.5rem 0}
+.progress-bar-bg{height:6px;border-radius:3px;background:var(--color-background-tertiary);overflow:hidden;margin:8px 0}
+.progress-bar{height:100%;border-radius:3px;background:var(--color-text-info);transition:width 0.3s}
+.progress-label{font-size:12px;color:var(--color-text-secondary)}
+.summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.5rem}
+.summary-card{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:.75rem 1rem;text-align:center}
+.summary-card .num{font-size:22px;font-weight:500;line-height:1}
+.summary-card .lbl{font-size:11px;color:var(--color-text-secondary);margin-top:4px;text-transform:uppercase;letter-spacing:.05em}
+.pass-num{color:var(--color-text-success)}
+.fail-num{color:var(--color-text-danger)}
+.warn-num{color:var(--color-text-warning)}
+.section{border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);margin-bottom:1rem;overflow:hidden}
+.section-hdr{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;background:var(--color-background-secondary);cursor:pointer;user-select:none}
+.section-hdr h3{font-size:14px;font-weight:500;color:var(--color-text-primary)}
+.section-hdr .badges{display:flex;gap:6px;align-items:center}
+.badge{font-size:11px;padding:2px 8px;border-radius:100px;font-weight:500}
+.badge-pass{background:var(--color-background-success);color:var(--color-text-success)}
+.badge-fail{background:var(--color-background-danger);color:var(--color-text-danger)}
+.badge-warn{background:var(--color-background-warning);color:var(--color-text-warning)}
+.badge-manual{background:var(--color-background-tertiary);color:var(--color-text-secondary)}
+.chevron{font-size:12px;color:var(--color-text-tertiary);transition:transform 0.2s}
+.chevron.open{transform:rotate(180deg)}
+.section-body{padding:.75rem 1rem;border-top:0.5px solid var(--color-border-tertiary)}
+.check-item{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start;padding:.6rem 0;border-bottom:0.5px solid var(--color-border-tertiary)}
+.check-item:last-child{border-bottom:none}
+.status-dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.dot-pass{background:var(--color-text-success)}
+.dot-fail{background:var(--color-text-danger)}
+.dot-warn{background:var(--color-text-warning)}
+.dot-manual{background:var(--color-text-tertiary)}
+.check-title{font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:2px}
+.check-detail{font-size:12px;color:var(--color-text-secondary);line-height:1.5}
+.check-wcag{font-size:11px;color:var(--color-text-tertiary);margin-top:2px}
+.issue-item{background:var(--color-background-danger);border-radius:var(--border-radius-md);padding:.5rem .75rem;margin-top:.5rem}
+.issue-item .issue-loc{font-size:11px;font-weight:500;color:var(--color-text-danger);margin-bottom:2px}
+.issue-item .issue-desc{font-size:12px;color:var(--color-text-danger)}
+.issue-item .issue-fix{font-size:11px;color:var(--color-text-secondary);margin-top:3px;font-style:italic}
+.warn-item{background:var(--color-background-warning);border-radius:var(--border-radius-md);padding:.5rem .75rem;margin-top:.5rem}
+.warn-item .issue-loc{font-size:11px;font-weight:500;color:var(--color-text-warning)}
+.warn-item .issue-desc{font-size:12px;color:var(--color-text-warning)}
+.warn-item .issue-fix{font-size:11px;color:var(--color-text-secondary);margin-top:3px;font-style:italic}
+.actions{display:flex;gap:8px;margin-top:1rem;flex-wrap:wrap}
+.filter-bar{display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap}
+.filter-btn{font-size:12px;padding:4px 12px;border-radius:100px;border:0.5px solid var(--color-border-secondary);background:transparent;cursor:pointer;font-family:var(--font-sans);color:var(--color-text-secondary);transition:all 0.12s}
+.filter-btn.active{background:var(--color-text-primary);color:var(--color-background-primary);border-color:var(--color-text-primary)}
+#results{display:none}
+#upload-area{display:block}
+.file-info{display:flex;align-items:center;gap:10px;padding:.75rem 1rem;background:var(--color-background-secondary);border-radius:var(--border-radius-md);margin-top:1rem}
+.file-info p{font-size:13px;color:var(--color-text-primary)}
+.file-info span{font-size:12px;color:var(--color-text-secondary)}
+</style>
+<h2 class="sr-only">Canvas IMSCC Accessibility Checker — upload a zip file to audit your course shell for WCAG 2.1 AA compliance</h2>
+<div id="app">
+  <div class="hdr">
+    <div class="hdr-icon">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2L3 6v4c0 4.4 3 8.5 7 9.9 4-1.4 7-5.5 7-9.9V6l-7-4z" stroke="var(--color-text-info)" stroke-width="1.5" fill="none"/><path d="M7 10l2 2 4-4" stroke="var(--color-text-info)" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </div>
+    <div>
+      <h1>Canvas Accessibility Checker</h1>
+      <p>WCAG 2.1 AA audit for exported Canvas course shells (.imscc / .zip)</p>
+    </div>
+  </div>
+
+  <div id="upload-area">
+    <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <div class="upload-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="var(--color-text-secondary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <h2>Drop your Canvas export here</h2>
+      <p>Accepts .imscc or .zip files exported from Canvas</p>
+      <p style="margin-top:.5rem;font-size:12px;">Or click to browse</p>
+      <input type="file" id="file-input" accept=".imscc,.zip">
+    </div>
+    <div id="file-preview" style="display:none">
+      <div class="file-info">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M13 2H6a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7l-3-5z" stroke="var(--color-text-secondary)" stroke-width="1.5"/><polyline points="13 2 13 7 18 7" stroke="var(--color-text-secondary)" stroke-width="1.5"/></svg>
+        <div><p id="file-name">file.imscc</p><span id="file-size"></span></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:1rem">
+        <button class="btn primary" id="run-btn" onclick="runAudit()">Run accessibility audit</button>
+        <button class="btn" onclick="resetTool()">Change file</button>
+      </div>
+    </div>
+    <div id="progress-area" style="display:none">
+      <div class="progress-wrap">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <span class="progress-label" id="progress-label">Parsing course structure...</span>
+          <span class="progress-label" id="progress-pct">0%</span>
+        </div>
+        <div class="progress-bar-bg"><div class="progress-bar" id="progress-bar" style="width:0%"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="results">
+    <div class="summary-grid">
+      <div class="summary-card"><div class="num pass-num" id="pass-count">0</div><div class="lbl">Passed</div></div>
+      <div class="summary-card"><div class="num fail-num" id="fail-count">0</div><div class="lbl">Issues found</div></div>
+      <div class="summary-card"><div class="num warn-num" id="manual-count">0</div><div class="lbl">Manual check needed</div></div>
+    </div>
+    <div class="filter-bar">
+      <button class="filter-btn active" onclick="filterResults('all',this)">All</button>
+      <button class="filter-btn" onclick="filterResults('fail',this)">Issues only</button>
+      <button class="filter-btn" onclick="filterResults('warn',this)">Manual checks</button>
+      <button class="filter-btn" onclick="filterResults('pass',this)">Passed</button>
+    </div>
+    <div id="results-body"></div>
+    <div class="actions">
+      <button class="btn primary" onclick="downloadPDF()">Download PDF report</button>
+      <button class="btn" onclick="resetTool()">Check another file</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+let auditData = null;
+let fileObj = null;
+
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if (f) handleFile(f);
+});
+fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+
+function handleFile(f) {
+  fileObj = f;
+  document.getElementById('file-name').textContent = f.name;
+  document.getElementById('file-size').textContent = (f.size/1024/1024).toFixed(2) + ' MB';
+  document.getElementById('file-preview').style.display = 'block';
+}
+
+function resetTool() {
+  fileObj = null; auditData = null;
+  document.getElementById('upload-area').style.display = 'block';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('file-preview').style.display = 'none';
+  document.getElementById('progress-area').style.display = 'none';
+  document.getElementById('run-btn').disabled = false;
+  fileInput.value = '';
+}
+
+function setProgress(pct, label) {
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-pct').textContent = pct + '%';
+  document.getElementById('progress-label').textContent = label;
+}
+
+async function runAudit() {
+  if (!fileObj) return;
+  document.getElementById('run-btn').disabled = true;
+  document.getElementById('file-preview').querySelector('.btn').disabled = true;
+  document.getElementById('progress-area').style.display = 'block';
+  setProgress(5, 'Reading zip file...');
+
+  try {
+    const zip = await JSZip.loadAsync(fileObj);
+    setProgress(15, 'Parsing course manifest...');
+    await sleep(200);
+
+    const manifest = await getFile(zip, 'imsmanifest.xml');
+    setProgress(25, 'Discovering pages and modules...');
+    await sleep(200);
+
+    const parser = new DOMParser();
+    const xmlDoc = manifest ? parser.parseFromString(manifest, 'text/xml') : null;
+
+    const pages = await extractPages(zip);
+    setProgress(50, 'Scanning HTML content for accessibility issues...');
+    await sleep(300);
+
+    const mediaFiles = Object.keys(zip.files).filter(k => /\.(mp4|mov|avi|mp3|wav|ogg|webm)$/i.test(k));
+    const imageFiles = Object.keys(zip.files).filter(k => /\.(jpg|jpeg|png|gif|svg|webp|bmp)$/i.test(k));
+    setProgress(70, 'Checking images, media, and links...');
+    await sleep(300);
+
+    auditData = await performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc);
+    setProgress(90, 'Generating report...');
+    await sleep(300);
+
+    setProgress(100, 'Done!');
+    await sleep(400);
+
+    renderResults();
+  } catch(err) {
+    alert('Error reading file: ' + err.message + '\n\nMake sure this is a valid Canvas export (.imscc/.zip).');
+    resetTool();
+  }
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function getFile(zip, name) {
+  const f = zip.files[name] || Object.values(zip.files).find(f => f.name.endsWith(name));
+  if (!f) return null;
+  return await f.async('string');
+}
+
+async function extractPages(zip) {
+  const pages = [];
+  const htmlFiles = Object.keys(zip.files).filter(k => /\.html?$/i.test(k));
+  for (const key of htmlFiles) {
+    try {
+      const content = await zip.files[key].async('string');
+      const parts = key.split('/');
+      pages.push({ path: key, name: parts[parts.length-1].replace(/\.html?$/i,''), content, module: inferModule(key) });
+    } catch(e) {}
+  }
+  return pages;
+}
+
+function inferModule(path) {
+  const parts = path.split('/');
+  if (parts.length > 1) return parts[0];
+  return 'Root';
+}
+
+async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc) {
+  const parser = new DOMParser();
+  const results = { sections: [] };
+
+  const pageIssues = { titles: [], headings: [], links: [], altText: [], colorContrast: [], tableHeaders: [], readingOrder: [] };
+  const mediaIssues = { captions: [], transcripts: [], audiodesc: [] };
+  const manualItems = [];
+
+  let totalImages = 0, missingAlt = [], imagesOfText = [];
+  let totalLinks = 0, badLinks = [];
+  let missingTitles = [], missingHeadings = [];
+  let tableIssues = [];
+  let totalPages = pages.length;
+
+  for (const page of pages) {
+    const doc = parser.parseFromString(page.content, 'text/html');
+    const loc = `${page.module} → ${page.name}`;
+
+    const title = doc.querySelector('title');
+    if (!title || !title.textContent.trim() || title.textContent.trim().toLowerCase() === 'untitled') {
+      missingTitles.push({ loc, issue: 'Page has no descriptive title tag', fix: 'Add a unique, descriptive <title> that reflects the page content.' });
+    }
+
+    const imgs = doc.querySelectorAll('img');
+    totalImages += imgs.length;
+    imgs.forEach(img => {
+      const alt = img.getAttribute('alt');
+      const src = img.getAttribute('src') || '';
+      if (alt === null) {
+        missingAlt.push({ loc, issue: `Image missing alt attribute (src: ${src.split('/').pop() || 'unknown'})`, fix: 'Add descriptive alt text to the image, or alt="" if purely decorative.' });
+      } else if (alt.length > 0 && /\.(png|jpg|jpeg|gif|svg)/i.test(alt)) {
+        missingAlt.push({ loc, issue: `Alt text appears to be a filename: "${alt.substring(0,40)}"`, fix: 'Replace filename with a meaningful description of the image content.' });
+      }
+      if (/text|screenshot|slide/i.test(src) && (!alt || alt.length < 10)) {
+        imagesOfText.push({ loc, issue: `Possible image of text detected (src: ${src.split('/').pop()})`, fix: 'Replace images of text with actual HTML text, or provide full text content in alt attribute.' });
+      }
+    });
+
+    const links = doc.querySelectorAll('a');
+    totalLinks += links.length;
+    links.forEach(a => {
+      const txt = a.textContent.trim();
+      const aria = a.getAttribute('aria-label') || '';
+      if (!aria && (!txt || /^(click here|here|link|read more|more|this|download)$/i.test(txt))) {
+        badLinks.push({ loc, issue: `Non-descriptive link text: "${txt || '(empty)'}"`, fix: 'Use meaningful link text that describes the destination (e.g., "Download the course syllabus PDF").' });
+      }
+    });
+
+    const tables = doc.querySelectorAll('table');
+    tables.forEach(tbl => {
+      const headers = tbl.querySelectorAll('th');
+      const scope = Array.from(headers).some(h => h.getAttribute('scope'));
+      if (!headers.length) {
+        tableIssues.push({ loc, issue: 'Data table found with no <th> header cells', fix: 'Mark header row cells as <th> elements with appropriate scope="col" or scope="row" attributes.' });
+      } else if (!scope) {
+        tableIssues.push({ loc, issue: 'Table has <th> headers but no scope attribute', fix: 'Add scope="col" or scope="row" to all <th> elements to clarify header direction.' });
+      }
+    });
+
+    const headings = doc.querySelectorAll('h1,h2,h3,h4,h5,h6');
+    if (headings.length === 0 && doc.body && doc.body.textContent.trim().length > 200) {
+      missingHeadings.push({ loc, issue: 'Long content page has no heading structure', fix: 'Use HTML headings (H1–H3) to organize content into logical sections.' });
+    }
+    let prevLevel = 0;
+    headings.forEach(h => {
+      const level = parseInt(h.tagName[1]);
+      if (level > prevLevel + 1 && prevLevel > 0) {
+        missingHeadings.push({ loc, issue: `Heading level skipped: H${prevLevel} → H${level} ("${h.textContent.trim().substring(0,40)}")`, fix: `Don't skip heading levels. Use H${prevLevel+1} instead of H${level}.` });
+      }
+      prevLevel = level;
+    });
+  }
+
+  const hasVideos = mediaFiles.filter(f => /\.(mp4|mov|avi|webm)$/i.test(f)).length;
+  const hasAudio = mediaFiles.filter(f => /\.(mp3|wav|ogg)$/i.test(f)).length;
+
+  results.sections = [
+    {
+      id: 'titles',
+      label: 'Page titles (WCAG 2.4.2)',
+      checks: missingTitles.length === 0
+        ? [{ status: 'pass', title: 'All pages have descriptive titles', detail: `${totalPages} page(s) checked — all have meaningful title tags.`, wcag: 'WCAG 2.4.2 Level A', issues: [] }]
+        : [{ status: 'fail', title: `${missingTitles.length} page(s) missing descriptive titles`, detail: `${totalPages} page(s) checked.`, wcag: 'WCAG 2.4.2 Level A', issues: missingTitles }]
+    },
+    {
+      id: 'headings',
+      label: 'Heading structure & labels (WCAG 1.3.1, 2.4.6)',
+      checks: missingHeadings.length === 0
+        ? [{ status: 'pass', title: 'Heading structure looks correct', detail: `${totalPages} page(s) scanned — heading hierarchy appears logical.`, wcag: 'WCAG 1.3.1 Level A / 2.4.6 Level AA', issues: [] }]
+        : [{ status: 'fail', title: `${missingHeadings.length} heading issue(s) found`, detail: `${totalPages} page(s) checked.`, wcag: 'WCAG 1.3.1 Level A / 2.4.6 Level AA', issues: missingHeadings }]
+    },
+    {
+      id: 'reading-order',
+      label: 'Logical reading order (WCAG 1.3.2, 2.4.3)',
+      checks: [{ status: 'warn', title: 'Manual verification required', detail: 'Reading order must be confirmed visually and with a screen reader. The DOM order should match the visual presentation.', wcag: 'WCAG 1.3.2 Level A / 2.4.3 Level A', issues: [] }]
+    },
+    {
+      id: 'links',
+      label: 'Descriptive link text (WCAG 2.4.4)',
+      checks: badLinks.length === 0
+        ? [{ status: totalLinks > 0 ? 'pass' : 'warn', title: totalLinks > 0 ? `All ${totalLinks} link(s) have descriptive text` : 'No links found to check', detail: `${totalLinks} link(s) scanned across ${totalPages} page(s).`, wcag: 'WCAG 2.4.4 Level A', issues: [] }]
+        : [{ status: 'fail', title: `${badLinks.length} non-descriptive link(s) found`, detail: `${totalLinks} link(s) checked.`, wcag: 'WCAG 2.4.4 Level A', issues: badLinks }]
+    },
+    {
+      id: 'color-contrast',
+      label: 'Color contrast (WCAG 1.4.3)',
+      checks: [{ status: 'warn', title: 'Manual check required', detail: 'Color contrast ratios (4.5:1 for normal text, 3:1 for large text and UI elements) cannot be reliably computed from an IMSCC export without rendering. Use the WebAIM Contrast Checker on live pages.', wcag: 'WCAG 1.4.3 Level AA', issues: [] }]
+    },
+    {
+      id: 'alt-text',
+      label: 'Image alt text (WCAG 1.1.1, 1.4.5)',
+      checks: (() => {
+        const all = [...missingAlt, ...imagesOfText];
+        if (totalImages === 0) return [{ status: 'warn', title: 'No images found in HTML content', detail: 'No <img> elements detected. If images are embedded via Canvas editor, verify alt text within the LMS.', wcag: 'WCAG 1.1.1 Level A / 1.4.5 Level AA', issues: [] }];
+        if (all.length === 0) return [{ status: 'pass', title: `All ${totalImages} image(s) have alt attributes`, detail: 'Review that alt text is meaningful, not just filenames. Decorative images should use alt="".', wcag: 'WCAG 1.1.1 Level A / 1.4.5 Level AA', issues: [] }];
+        return [{ status: 'fail', title: `${all.length} alt text issue(s) found (${totalImages} images total)`, detail: '', wcag: 'WCAG 1.1.1 Level A / 1.4.5 Level AA', issues: all }];
+      })()
+    },
+    {
+      id: 'long-desc',
+      label: 'Long descriptions for complex images (WCAG 1.1.1)',
+      checks: [{ status: 'warn', title: 'Manual review needed', detail: 'Complex visuals (charts, diagrams, infographics) require extended text descriptions. Scan each page to identify complex images and confirm a long description is available nearby or linked.', wcag: 'WCAG 1.1.1 Level A', issues: [] }]
+    },
+    {
+      id: 'tables',
+      label: 'Accessible tables (WCAG 1.3.1)',
+      checks: tableIssues.length === 0
+        ? [{ status: 'pass', title: 'No table accessibility issues detected', detail: 'Tables found have header cells with scope attributes.', wcag: 'WCAG 1.3.1 Level A', issues: [] }]
+        : [{ status: 'fail', title: `${tableIssues.length} table issue(s) found`, detail: '', wcag: 'WCAG 1.3.1 Level A', issues: tableIssues }]
+    },
+    {
+      id: 'captions',
+      label: 'Video captions (WCAG 1.2.2)',
+      checks: [{ status: hasVideos > 0 ? 'warn' : 'pass', title: hasVideos > 0 ? `${hasVideos} video file(s) found — captions require manual verification` : 'No video files detected in this export', detail: hasVideos > 0 ? 'Verify that all videos have accurate captions (not auto-generated only). Captions should include all speech, speaker identification, and relevant sounds.' : 'If videos are embedded via YouTube, Kaltura, or external links, verify captions on those platforms directly.', wcag: 'WCAG 1.2.2 Level A', issues: [] }]
+    },
+    {
+      id: 'transcripts',
+      label: 'Transcripts for audio/video (WCAG 1.2.1)',
+      checks: [{ status: (hasVideos > 0 || hasAudio > 0) ? 'warn' : 'pass', title: (hasVideos > 0 || hasAudio > 0) ? `${hasVideos + hasAudio} media file(s) — transcripts require manual verification` : 'No local media files detected', detail: 'All audio-only and video content must have an accessible text transcript. Verify that a linked transcript is available for each media item.', wcag: 'WCAG 1.2.1 Level A', issues: [] }]
+    },
+    {
+      id: 'audiodesc',
+      label: 'Audio descriptions (WCAG 1.2.3, 1.2.5)',
+      checks: [{ status: hasVideos > 0 ? 'warn' : 'pass', title: hasVideos > 0 ? 'Audio descriptions require manual review' : 'No video files detected in this export', detail: 'Videos with important on-screen visual information must have audio descriptions or a text alternative. Review each video to confirm spoken audio fully conveys visual content, or that an alternative exists.', wcag: 'WCAG 1.2.3 Level A / 1.2.5 Level AA', issues: [] }]
+    },
+    {
+      id: 'flashing',
+      label: 'Seizure triggers — flashing content (WCAG 2.3.1)',
+      checks: [{ status: 'warn', title: 'Manual check required', detail: 'Content must not flash more than 3 times per second. This cannot be detected from static file analysis. Review any animations, GIFs, or embedded media for flashing/strobing effects.', wcag: 'WCAG 2.3.1 Level A', issues: [] }]
+    },
+    {
+      id: 'animated',
+      label: 'Animated/auto-updating content (WCAG 2.2.2)',
+      checks: [{ status: 'warn', title: 'Manual check required', detail: 'Any content that moves, scrolls, blinks, or auto-updates for more than 5 seconds must have a pause/stop/hide mechanism. Review embedded animations, carousels, and auto-advancing slideshows.', wcag: 'WCAG 2.2.2 Level A', issues: [] }]
+    },
+  ];
+
+  return results;
+}
+
+function countByStatus(s) {
+  let pass=0,fail=0,warn=0;
+  for (const sec of s.sections) {
+    for (const chk of sec.checks) {
+      if (chk.status==='pass') pass++;
+      else if (chk.status==='fail') fail++;
+      else warn++;
+    }
+  }
+  return {pass,fail,warn};
+}
+
+let currentFilter = 'all';
+function filterResults(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderSections();
+}
+
+function renderResults() {
+  document.getElementById('upload-area').style.display = 'none';
+  document.getElementById('results').style.display = 'block';
+  const {pass,fail,warn} = countByStatus(auditData);
+  document.getElementById('pass-count').textContent = pass;
+  document.getElementById('fail-count').textContent = fail;
+  document.getElementById('manual-count').textContent = warn;
+  renderSections();
+}
+
+function renderSections() {
+  const body = document.getElementById('results-body');
+  body.innerHTML = '';
+  for (const sec of auditData.sections) {
+    const anyMatch = sec.checks.some(c => currentFilter==='all' || c.status===currentFilter || (currentFilter==='warn'&&c.status==='warn'));
+    if (!anyMatch) continue;
+    const failCt = sec.checks.filter(c=>c.status==='fail').length;
+    const warnCt = sec.checks.filter(c=>c.status==='warn').length;
+    const passCt = sec.checks.filter(c=>c.status==='pass').length;
+
+    const div = document.createElement('div');
+    div.className = 'section';
+    div.innerHTML = `
+      <div class="section-hdr" onclick="toggleSection('${sec.id}')">
+        <h3>${sec.label}</h3>
+        <div class="badges">
+          ${passCt>0?`<span class="badge badge-pass">${passCt} pass</span>`:''}
+          ${failCt>0?`<span class="badge badge-fail">${failCt} issue${failCt>1?'s':''}</span>`:''}
+          ${warnCt>0?`<span class="badge badge-warn">${warnCt} manual</span>`:''}
+          <span class="chevron" id="chev-${sec.id}">▼</span>
+        </div>
+      </div>
+      <div class="section-body" id="body-${sec.id}">
+        ${sec.checks.map(c => renderCheck(c)).join('')}
+      </div>`;
+    body.appendChild(div);
+  }
+}
+
+function renderCheck(c) {
+  const dotClass = c.status==='pass'?'dot-pass':c.status==='fail'?'dot-fail':c.status==='warn'?'dot-warn':'dot-manual';
+  const issueHtml = (c.issues||[]).map(i => `
+    <div class="${c.status==='fail'?'issue-item':'warn-item'}">
+      <div class="issue-loc">${i.loc||'Manual check'}</div>
+      <div class="issue-desc">${i.issue}</div>
+      ${i.fix?`<div class="issue-fix">Suggestion: ${i.fix}</div>`:''}
+    </div>`).join('');
+  return `<div class="check-item">
+    <div class="status-dot ${dotClass}"></div>
+    <div>
+      <div class="check-title">${c.title}</div>
+      ${c.detail?`<div class="check-detail">${c.detail}</div>`:''}
+      <div class="check-wcag">${c.wcag}</div>
+      ${issueHtml}
+    </div>
+  </div>`;
+}
+
+function toggleSection(id) {
+  const body = document.getElementById('body-'+id);
+  const chev = document.getElementById('chev-'+id);
+  const hidden = body.style.display==='none';
+  body.style.display = hidden?'':'none';
+  chev.classList.toggle('open', !hidden);
+}
+
+function downloadPDF() {
+  const {jsPDF} = window.jspdf;
+  const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const W = 210, M = 15, CW = W - M*2;
+  let y = 20;
+
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(16);
+  doc.setTextColor(30,30,30);
+  doc.text('Canvas Course Accessibility Audit', M, y); y+=8;
+
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(9);
+  doc.setTextColor(100,100,100);
+  doc.text(`File: ${fileObj ? fileObj.name : 'Unknown'} | Generated: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}`, M, y); y+=5;
+  doc.text('WCAG 2.1 AA Standard', M, y); y+=10;
+
+  const {pass,fail,warn} = countByStatus(auditData);
+  const sumData = [[`${pass} passed`,`${fail} issues`,`${warn} manual checks needed`]];
+  const sumColors = [[{r:22,g:101,b:52},{r:153,g:27,b:27},{r:120,g:82,b:12}]];
+  doc.setFontSize(10);
+  const bw=52, bh=14, bx=[M,M+bw+4,M+(bw+4)*2];
+  bx.forEach((x,i)=>{
+    const txt = sumData[0][i].split(' ');
+    const num = txt[0], label = txt.slice(1).join(' ');
+    doc.setFillColor(240,240,240);
+    doc.roundedRect(x,y,bw,bh,2,2,'F');
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(13);
+    doc.setTextColor(...Object.values(sumColors[0][i]));
+    doc.text(num,x+bw/2,y+6,{align:'center'});
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(8);
+    doc.setTextColor(80,80,80);
+    doc.text(label,x+bw/2,y+11,{align:'center'});
+  }); y+=22;
+
+  for (const sec of auditData.sections) {
+    if (y>265){doc.addPage();y=20;}
+    doc.setFillColor(245,245,245);
+    doc.roundedRect(M,y,CW,7,1,1,'F');
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(10);
+    doc.setTextColor(30,30,30);
+    doc.text(sec.label,M+3,y+5); y+=10;
+
+    for (const c of sec.checks) {
+      if (y>265){doc.addPage();y=20;}
+      const statusLabel = c.status==='pass'?'PASS':c.status==='fail'?'FAIL':'MANUAL';
+      const sc = c.status==='pass'?[22,101,52]:c.status==='fail'?[153,27,27]:[120,82,12];
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(8);
+      doc.setTextColor(...sc);
+      doc.text(`[${statusLabel}]`,M+2,y); 
+      doc.setFont('helvetica','normal');
+      doc.setTextColor(30,30,30);
+      const titleLines = doc.splitTextToSize(c.title, CW-22);
+      doc.text(titleLines,M+20,y); y+=titleLines.length*4.5;
+
+      if (c.detail) {
+        doc.setFontSize(7.5);
+        doc.setTextColor(80,80,80);
+        const dl = doc.splitTextToSize(c.detail,CW-6);
+        doc.text(dl,M+3,y); y+=dl.length*4+1;
+      }
+      doc.setFontSize(7);
+      doc.setTextColor(130,130,130);
+      doc.text(c.wcag,M+3,y); y+=5;
+
+      for (const issue of (c.issues||[])) {
+        if (y>265){doc.addPage();y=20;}
+        doc.setFillColor(c.status==='fail'?255:255,c.status==='fail'?240:245,c.status==='fail'?240:220);
+        const issueLines = doc.splitTextToSize(`• ${issue.loc}: ${issue.issue}`,CW-10);
+        const fixLines = issue.fix ? doc.splitTextToSize(`  Suggestion: ${issue.fix}`,CW-10) : [];
+        const blockH = (issueLines.length+fixLines.length)*4+4;
+        doc.roundedRect(M+3,y-2,CW-6,blockH,1,1,'F');
+        doc.setFont('helvetica','bold');
+        doc.setFontSize(7.5);
+        doc.setTextColor(c.status==='fail'?140:100,c.status==='fail'?20:60,c.status==='fail'?20:0);
+        doc.text(issueLines,M+5,y+2); y+=issueLines.length*4+1;
+        if (issue.fix){
+          doc.setFont('helvetica','italic');
+          doc.setTextColor(80,80,80);
+          doc.text(fixLines,M+5,y+1); y+=fixLines.length*4+1;
+        }
+        y+=2;
+      }
+      y+=2;
+    }
+    y+=3;
+  }
+
+  const pgCt = doc.getNumberOfPages();
+  for(let i=1;i<=pgCt;i++){
+    doc.setPage(i);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(7);
+    doc.setTextColor(150,150,150);
+    doc.text(`Canvas Accessibility Audit — WCAG 2.1 AA — Page ${i} of ${pgCt}`,W/2,292,{align:'center'});
+  }
+
+  doc.save(`canvas-accessibility-audit-${new Date().toISOString().slice(0,10)}.pdf`);
+}
+</script>

@@ -1281,25 +1281,65 @@ function downloadPDF() {
 
       for (const issue of (c.issues||[])) {
         if (y>265){doc.addPage();y=20;}
-        doc.setFillColor(c.status==='fail'?255:255,c.status==='fail'?240:245,c.status==='fail'?240:220);
-        // For contrast issues, append hex values to the issue text for the PDF
-        const issueText = issue.fgHex
-          ? `• ${issue.loc}: ${issue.issue}`
-          : `• ${issue.loc}: ${issue.issue}`;
-        const issueLines = doc.splitTextToSize(issueText, CW-10);
-        const fixLines = issue.fix ? doc.splitTextToSize(`  Suggestion: ${issue.fix}`,CW-10) : [];
-        const blockH = (issueLines.length+fixLines.length)*4+4;
-        doc.roundedRect(M+3,y-2,CW-6,blockH,1,1,'F');
+
+        // Wrap each field independently — concatenating loc+issue into one string
+        // caused jsPDF to overrun the margin when loc contained long path strings
+        // with no natural word-break characters.
+        const locLines  = doc.splitTextToSize(issue.loc  || '', CW-10);
+        const descLines = doc.splitTextToSize(issue.issue || '', CW-10);
+        const fixLines  = issue.fix
+          ? doc.splitTextToSize(`Suggestion: ${issue.fix}`, CW-10)
+          : [];
+
+        // Compute block height now that we know all line counts.
+        // lineH=4mm, plus 6mm for top+bottom padding, plus 3mm gap before fix.
+        const lineH = 4;
+        const blockH = (locLines.length + descLines.length + fixLines.length) * lineH
+                       + (fixLines.length > 0 ? 3 : 0)
+                       + 6;
+
+        doc.setFillColor(
+          c.status==='fail' ? 255 : 255,
+          c.status==='fail' ? 240 : 245,
+          c.status==='fail' ? 240 : 220
+        );
+        doc.roundedRect(M+3, y-2, CW-6, blockH, 1, 1, 'F');
+
+        let ty = y + 2;
+
+        // Location — small italic, coloured, reads as metadata
+        doc.setFont('helvetica','italic');
+        doc.setFontSize(7);
+        doc.setTextColor(
+          c.status==='fail' ? 160 : 120,
+          c.status==='fail' ?  30 :  70,
+          c.status==='fail' ?  30 :   0
+        );
+        doc.text(locLines, M+5, ty);
+        ty += locLines.length * lineH;
+
+        // Issue description — bold, slightly larger
         doc.setFont('helvetica','bold');
         doc.setFontSize(7.5);
-        doc.setTextColor(c.status==='fail'?140:100,c.status==='fail'?20:60,c.status==='fail'?20:0);
-        doc.text(issueLines,M+5,y+2); y+=issueLines.length*4+1;
-        if (issue.fix){
+        doc.setTextColor(
+          c.status==='fail' ? 140 : 100,
+          c.status==='fail' ?  20 :  60,
+          c.status==='fail' ?  20 :   0
+        );
+        doc.text(descLines, M+5, ty);
+        ty += descLines.length * lineH;
+
+        // Fix / suggestion — normal weight, muted
+        if (fixLines.length > 0) {
+          ty += 1;
           doc.setFont('helvetica','italic');
-          doc.setTextColor(80,80,80);
-          doc.text(fixLines,M+5,y+1); y+=fixLines.length*4+1;
+          doc.setFontSize(7);
+          doc.setTextColor(90, 90, 90);
+          doc.text(fixLines, M+5, ty);
+          ty += fixLines.length * lineH;
         }
-        y+=2;
+
+        y = ty + 3;
       }
       y+=2;
     }

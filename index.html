@@ -618,7 +618,8 @@ async function runAudit() {
     const parser = new DOMParser();
     const xmlDoc = manifest ? parser.parseFromString(manifest, 'text/xml') : null;
 
-    const pages = await extractPages(zip);
+    const { pageMap } = parseManifest(xmlDoc);
+        const pages = await extractPages(zip, pageMap);
     setProgress(45, 'Scanning HTML content for accessibility issues...');
     await sleep(300);
 
@@ -649,15 +650,81 @@ async function getFile(zip, name) {
   return await f.async('string');
 }
 
-async function extractPages(zip) {
-  const pages = [];
+
+/**
+ * Parse imsmanifest.xml and return a map of resource href → {moduleName, pageTitle}.
+ *
+ * Canvas IMSCC structure:
+ *   <organization>
+ *     <item> (root)
+ *       <item> (module, has <title>)
+ *         <item identifierref="resId"> (page, has <title>)
+ *
+ * <resources>
+ *   <resource identifier="resId" href="wiki_content/page.html"/>
+ */
+function parseManifest(xmlDoc) {
+  const empty = { pageMap: {}, hasManifest: false };
+  if (!xmlDoc) return empty;
+  if (xmlDoc.querySelector('parsererror')) return empty;
+
+  // resource identifier → href
+  const resourceHrefs = {};
+  xmlDoc.querySelectorAll('resource').forEach(r => {
+    const id   = r.getAttribute('identifier');
+    const href = r.getAttribute('href');
+    if (id && href) resourceHrefs[id] = href;
+  });
+
+  const pageMap = {};
+  const orgRoot = xmlDoc.querySelector('organization > item');
+  if (orgRoot) {
+    Array.from(orgRoot.children)
+      .filter(el => el.tagName === 'item')
+      .forEach(moduleItem => {
+        const moduleTitleEl = Array.from(moduleItem.children).find(el => el.tagName === 'title');
+        const moduleName = moduleTitleEl ? moduleTitleEl.textContent.trim() : 'Unnamed Module';
+
+        Array.from(moduleItem.children)
+          .filter(el => el.tagName === 'item')
+          .forEach(pageItem => {
+            const ref = pageItem.getAttribute('identifierref');
+            const pageTitleEl = Array.from(pageItem.children).find(el => el.tagName === 'title');
+            const pageTitle = pageTitleEl ? pageTitleEl.textContent.trim() : '';
+            if (ref && resourceHrefs[ref]) {
+              pageMap[resourceHrefs[ref]] = { moduleName, pageTitle };
+            }
+          });
+      });
+  }
+
+  return { pageMap, hasManifest: true };
+}
+
+async function extractPages(zip, pageMap) {  const pages = [];
   const htmlFiles = Object.keys(zip.files).filter(k => /\.html?$/i.test(k));
+
+  const map = pageMap || {};
+  const manifestPresent = Object.keys(map).length > 0;
+
   for (const key of htmlFiles) {
     try {
       const content = await zip.files[key].async('string');
       const parts = key.split('/');
-      pages.push({ path: key, name: parts[parts.length-1].replace(/\.html?$/i,''), content, module: inferModule(key) });
-    } catch(e) {}
+
+      const fileName = parts[parts.length - 1].replace(/\.html?$/i, '');
+      const entry = map[key];
+
+      pages.push({
+        path: key,
+        name:   entry ? (entry.pageTitle || fileName) : fileName,
+        content,
+        module: entry
+          ? entry.moduleName
+          : (manifestPresent ? 'Not attached to a module' : inferModule(key)),
+        inManifest: !!entry
+      });
+        } catch(e) {}
   }
   return pages;
 }

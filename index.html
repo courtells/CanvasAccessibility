@@ -5,8 +5,6 @@
 /* ── Reset & base ─────────────────────────────────────────────────────────── */
 *{box-sizing:border-box;margin:0;padding:0}
 
-/* Custom property overrides — keep using the host's vars where sensible,
-   but layer our own design tokens on top for everything visual */
 :root{
   --c-ink:       #0f1117;
   --c-ink-soft:  #3a3f4d;
@@ -98,7 +96,6 @@ body{
   background:
     radial-gradient(circle at 50% 0%, rgba(37,99,235,.04) 0%, transparent 60%),
     var(--c-surface);
-  /* subtle dot-grid texture */
   background-image:
     radial-gradient(circle, rgba(37,99,235,.04) 0%, transparent 60%),
     radial-gradient(var(--c-border) 1px, transparent 1px);
@@ -243,7 +240,78 @@ body{
 .fail-num{color: var(--c-fail)}
 .warn-num{color: var(--c-warn)}
 
-/* ── Sections ─────────────────────────────────────────────────────────────── */
+/* ── View toggle ──────────────────────────────────────────────────────────── */
+.view-toggle-wrap{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.view-toggle{
+  display: flex;
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  padding: 3px;
+  gap: 2px;
+}
+.view-btn{
+  font-size: 12px;
+  padding: 5px 13px;
+  border-radius: var(--r-md);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-weight: 500;
+  color: var(--c-ink-muted);
+  transition: all .15s;
+  letter-spacing: -.1px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.view-btn:hover{color: var(--c-ink); background: white}
+.view-btn.active{
+  background: white;
+  color: var(--c-ink);
+  box-shadow: var(--shadow-xs);
+}
+
+/* ── Filter bar ───────────────────────────────────────────────────────────── */
+.filter-bar{
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  padding: .3rem;
+  background: var(--c-surface-2);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--c-border);
+  width: fit-content;
+}
+.filter-btn{
+  font-size: 12px;
+  padding: 5px 13px;
+  border-radius: var(--r-md);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-weight: 500;
+  color: var(--c-ink-muted);
+  transition: all .15s;
+  letter-spacing: -.1px;
+}
+.filter-btn:hover{color: var(--c-ink); background: white}
+.filter-btn.active{
+  background: white;
+  color: var(--c-ink);
+  box-shadow: var(--shadow-xs);
+}
+
+/* ── Sections (check-type view) ──────────────────────────────────────────── */
 .section{
   border: 1px solid var(--c-border);
   border-radius: var(--r-lg);
@@ -304,7 +372,127 @@ body{
   border-top: 1px solid var(--c-border);
 }
 
-/* ── Check items ──────────────────────────────────────────────────────────── */
+/* ── Module view ──────────────────────────────────────────────────────────── */
+.module-block{
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  margin-bottom: 1rem;
+  overflow: hidden;
+  background: white;
+  box-shadow: var(--shadow-xs);
+}
+.module-hdr{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .85rem 1.1rem;
+  background: linear-gradient(to right, var(--c-surface), var(--c-surface-2));
+  border-bottom: 1px solid var(--c-border);
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+.module-hdr:hover{ background: var(--c-surface-2); }
+.module-name{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.module-name h3{
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-ink);
+  letter-spacing: -.2px;
+}
+.module-icon{
+  width: 26px; height: 26px;
+  border-radius: var(--r-sm);
+  background: var(--c-accent-bg);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.module-icon.unattached{
+  background: var(--c-surface-3);
+}
+.module-pages{
+  padding: .6rem .8rem;
+}
+
+/* Each page within a module */
+.page-block{
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  margin-bottom: .5rem;
+  overflow: hidden;
+  background: var(--c-surface);
+}
+.page-block:last-child{ margin-bottom: 0; }
+.page-hdr{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .6rem .9rem;
+  cursor: pointer;
+  user-select: none;
+  gap: 8px;
+  transition: background .15s;
+}
+.page-hdr:hover{ background: var(--c-surface-2); }
+.page-hdr h4{
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--c-ink);
+  letter-spacing: -.1px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.page-body{
+  padding: .5rem .9rem .7rem;
+  border-top: 1px solid var(--c-border);
+  background: white;
+}
+
+/* Finding row inside page body */
+.finding-row{
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: .55rem 0;
+  border-bottom: 1px solid var(--c-border);
+}
+.finding-row:last-child{ border-bottom: none; }
+.finding-label{
+  font-size: 10px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--c-ink-ghost);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  white-space: nowrap;
+  padding-top: 2px;
+  min-width: 90px;
+}
+.finding-content{ }
+.finding-title{
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--c-ink);
+  margin-bottom: 2px;
+}
+.finding-detail{
+  font-size: 11.5px;
+  color: var(--c-ink-muted);
+  line-height: 1.5;
+}
+
+/* Unattached module styling */
+.module-block.unattached .module-hdr{
+  background: var(--c-surface-3);
+}
+
+/* ── Check items (check view) ─────────────────────────────────────────────── */
 .check-item{
   display: grid;
   grid-template-columns: auto 1fr;
@@ -314,15 +502,6 @@ body{
   border-bottom: 1px solid var(--c-border);
 }
 .check-item:last-child{border-bottom: none}
-
-/* ── Status icons (replaces dots) ─────────────────────────────────────────── */
-.status-icon{
-  width: 18px; height: 18px;
-  flex-shrink: 0;
-  margin-top: 1px;
-  display: flex; align-items: center; justify-content: center;
-}
-/* Keep dot classes in place so no JS breaks, but they're now hidden — icons render via renderCheck() */
 .status-dot{ display: none; }
 
 .check-title{
@@ -361,7 +540,6 @@ body{
   background: #fffbeb;
   border-color: var(--c-warn);
 }
-
 .issue-item .issue-loc,
 .warn-item .issue-loc{
   font-size: 10.5px;
@@ -372,12 +550,10 @@ body{
 }
 .issue-item .issue-loc{color: var(--c-fail)}
 .warn-item .issue-loc{color: var(--c-warn)}
-
 .issue-item .issue-desc,
 .warn-item .issue-desc{font-size: 12px; line-height: 1.55; font-weight: 400}
 .issue-item .issue-desc{color: #991b1b}
 .warn-item .issue-desc{color: #92400e}
-
 .issue-item .issue-fix,
 .warn-item .issue-fix{
   font-size: 11px;
@@ -387,39 +563,34 @@ body{
   line-height: 1.5;
 }
 
-/* ── Actions & filters ────────────────────────────────────────────────────── */
-.actions{display: flex; gap: 8px; margin-top: 1.25rem; flex-wrap: wrap}
-
-.filter-bar{
-  display: flex;
-  gap: 5px;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
-  padding: .3rem;
-  background: var(--c-surface-2);
-  border-radius: var(--r-lg);
-  border: 1px solid var(--c-border);
-  width: fit-content;
-}
-.filter-btn{
+/* Module-view issue cards (no loc since we already show page context) */
+.mod-issue-item, .mod-warn-item, .mod-pass-item{
+  border-radius: var(--r-sm);
+  padding: .45rem .7rem;
+  margin-top: .35rem;
+  border-left: 2.5px solid transparent;
   font-size: 12px;
-  padding: 5px 13px;
-  border-radius: var(--r-md);
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-family: var(--font-body);
-  font-weight: 500;
+}
+.mod-issue-item{ background: #fff5f5; border-color: var(--c-fail); color: #991b1b; }
+.mod-warn-item{  background: #fffbeb; border-color: var(--c-warn);  color: #92400e; }
+.mod-pass-item{  background: var(--c-pass-bg); border-color: var(--c-pass); color: #14532d; }
+.mod-issue-item .fix, .mod-warn-item .fix{
+  font-size: 11px;
   color: var(--c-ink-muted);
-  transition: all .15s;
-  letter-spacing: -.1px;
+  margin-top: 3px;
+  font-style: italic;
 }
-.filter-btn:hover{color: var(--c-ink); background: white}
-.filter-btn.active{
-  background: white;
-  color: var(--c-ink);
-  box-shadow: var(--shadow-xs);
+
+/* ── Status icon ──────────────────────────────────────────────────────────── */
+.status-icon{
+  width: 18px; height: 18px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  display: flex; align-items: center; justify-content: center;
 }
+
+/* ── Actions ──────────────────────────────────────────────────────────────── */
+.actions{display: flex; gap: 8px; margin-top: 1.25rem; flex-wrap: wrap}
 
 /* ── Visibility ───────────────────────────────────────────────────────────── */
 #results{display:none}
@@ -487,7 +658,16 @@ body{
 
 /* ── sr-only ──────────────────────────────────────────────────────────────── */
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+/* ── Empty state ──────────────────────────────────────────────────────────── */
+.empty-state{
+  text-align: center;
+  padding: 2rem;
+  color: var(--c-ink-muted);
+  font-size: 13px;
+}
 </style>
+
 <h2 class="sr-only">Canvas IMSCC Accessibility Checker — upload a zip file to audit your course shell for WCAG 2.1 AA compliance.</h2>
 <div id="app">
   <div class="hdr">
@@ -544,12 +724,27 @@ body{
       <div class="summary-card"><div class="num fail-num" id="fail-count">0</div><div class="lbl">Issues found</div></div>
       <div class="summary-card"><div class="num warn-num" id="manual-count">0</div><div class="lbl">Manual check needed</div></div>
     </div>
-    <div class="filter-bar">
-      <button class="filter-btn active" onclick="filterResults('all',this)">All</button>
-      <button class="filter-btn" onclick="filterResults('fail',this)">Issues only</button>
-      <button class="filter-btn" onclick="filterResults('warn',this)">Manual checks</button>
-      <button class="filter-btn" onclick="filterResults('pass',this)">Passed</button>
+
+    <!-- View toggle + filter bar -->
+    <div class="view-toggle-wrap">
+      <div class="view-toggle">
+        <button class="view-btn active" id="view-checks-btn" onclick="setView('checks')">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x=".75" y=".75" width="11.5" height="2.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x=".75" y="5.25" width="11.5" height="2.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x=".75" y="9.75" width="11.5" height="2.5" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
+          By Check Type
+        </button>
+        <button class="view-btn" id="view-modules-btn" onclick="setView('modules')">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1 2.5h4.5v4.5H1zM7.5 2.5H12v4.5H7.5zM1 8H5.5v4.5H1zM7.5 8H12v4.5H7.5z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+          By Module
+        </button>
+      </div>
+      <div class="filter-bar" id="filter-bar">
+        <button class="filter-btn active" onclick="filterResults('all',this)">All</button>
+        <button class="filter-btn" onclick="filterResults('fail',this)">Issues only</button>
+        <button class="filter-btn" onclick="filterResults('warn',this)">Manual checks</button>
+        <button class="filter-btn" onclick="filterResults('pass',this)">Passed</button>
+      </div>
     </div>
+
     <div id="results-body"></div>
     <div class="actions">
       <button class="btn primary" onclick="downloadPDF()">Download PDF report</button>
@@ -563,7 +758,10 @@ body{
 <script>
 let auditData = null;
 let fileObj = null;
+let currentFilter = 'all';
+let currentView = 'checks'; // 'checks' or 'modules'
 
+// ─── File handling ────────────────────────────────────────────────────────────
 const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
 
@@ -599,6 +797,18 @@ function setProgress(pct, label) {
   document.getElementById('progress-label').textContent = label;
 }
 
+// ─── View switching ───────────────────────────────────────────────────────────
+function setView(v) {
+  currentView = v;
+  document.getElementById('view-checks-btn').classList.toggle('active', v === 'checks');
+  document.getElementById('view-modules-btn').classList.toggle('active', v === 'modules');
+  // Module view has its own built-in "all" scope, so filter bar is less relevant
+  // but we keep it visible in both modes — it applies in checks view and is
+  // shown as informational context in module view.
+  renderResults();
+}
+
+// ─── Audit runner ─────────────────────────────────────────────────────────────
 async function runAudit() {
   if (!fileObj) return;
   document.getElementById('run-btn').disabled = true;
@@ -619,7 +829,7 @@ async function runAudit() {
     const xmlDoc = manifest ? parser.parseFromString(manifest, 'text/xml') : null;
 
     const { pageMap } = parseManifest(xmlDoc);
-        const pages = await extractPages(zip, pageMap);
+    const pages = await extractPages(zip, pageMap);
     setProgress(45, 'Scanning HTML content for accessibility issues...');
     await sleep(300);
 
@@ -650,25 +860,12 @@ async function getFile(zip, name) {
   return await f.async('string');
 }
 
-
-/**
- * Parse imsmanifest.xml and return a map of resource href → {moduleName, pageTitle}.
- *
- * Canvas IMSCC structure:
- *   <organization>
- *     <item> (root)
- *       <item> (module, has <title>)
- *         <item identifierref="resId"> (page, has <title>)
- *
- * <resources>
- *   <resource identifier="resId" href="wiki_content/page.html"/>
- */
+// ─── Manifest parsing ─────────────────────────────────────────────────────────
 function parseManifest(xmlDoc) {
   const empty = { pageMap: {}, hasManifest: false };
   if (!xmlDoc) return empty;
   if (xmlDoc.querySelector('parsererror')) return empty;
 
-  // resource identifier → href
   const resourceHrefs = {};
   xmlDoc.querySelectorAll('resource').forEach(r => {
     const id   = r.getAttribute('identifier');
@@ -684,7 +881,6 @@ function parseManifest(xmlDoc) {
       .forEach(moduleItem => {
         const moduleTitleEl = Array.from(moduleItem.children).find(el => el.tagName === 'title');
         const moduleName = moduleTitleEl ? moduleTitleEl.textContent.trim() : 'Unnamed Module';
-
         Array.from(moduleItem.children)
           .filter(el => el.tagName === 'item')
           .forEach(pageItem => {
@@ -701,9 +897,9 @@ function parseManifest(xmlDoc) {
   return { pageMap, hasManifest: true };
 }
 
-async function extractPages(zip, pageMap) {  const pages = [];
+async function extractPages(zip, pageMap) {
+  const pages = [];
   const htmlFiles = Object.keys(zip.files).filter(k => /\.html?$/i.test(k));
-
   const map = pageMap || {};
   const manifestPresent = Object.keys(map).length > 0;
 
@@ -711,10 +907,8 @@ async function extractPages(zip, pageMap) {  const pages = [];
     try {
       const content = await zip.files[key].async('string');
       const parts = key.split('/');
-
       const fileName = parts[parts.length - 1].replace(/\.html?$/i, '');
       const entry = map[key];
-
       pages.push({
         path: key,
         name:   entry ? (entry.pageTitle || fileName) : fileName,
@@ -724,7 +918,7 @@ async function extractPages(zip, pageMap) {  const pages = [];
           : (manifestPresent ? 'Not attached to a module' : inferModule(key)),
         inManifest: !!entry
       });
-        } catch(e) {}
+    } catch(e) {}
   }
   return pages;
 }
@@ -735,20 +929,7 @@ function inferModule(path) {
   return 'Root';
 }
 
-// ─── COLOR CONTRAST ENGINE ────────────────────────────────────────────────────
-//
-// WCAG 2.1 SC 1.4.3 requires:
-//   • Normal text:  contrast ratio ≥ 4.5:1
-//   • Large text (≥18pt / ≥14pt bold): contrast ratio ≥ 3:1
-//
-// We implement the full WCAG relative-luminance formula:
-//   L = 0.2126·R + 0.7152·G + 0.0722·B
-// where each channel is first linearized via:
-//   c_lin = (c/255 ≤ 0.04045) ? c/255/12.92 : ((c/255+0.055)/1.055)^2.4
-//
-// Then contrast ratio = (L_lighter + 0.05) / (L_darker + 0.05)
-
-/** Named CSS colors → hex. Covers the ~150 standard CSS named colors. */
+// ─── Color contrast engine ────────────────────────────────────────────────────
 const CSS_NAMED_COLORS = {
   aliceblue:'#f0f8ff',antiquewhite:'#faebd7',aqua:'#00ffff',aquamarine:'#7fffd4',
   azure:'#f0ffff',beige:'#f5f5dc',bisque:'#ffe4c4',black:'#000000',blanchedalmond:'#ffebcd',
@@ -786,55 +967,31 @@ const CSS_NAMED_COLORS = {
   yellowgreen:'#9acd32'
 };
 
-/**
- * Parse any CSS color string into {r, g, b} (0-255 each).
- * Handles: #rgb, #rrggbb, #rrggbbaa, rgb(), rgba(), named colors.
- * Returns null if the color cannot be parsed (e.g. "transparent", "inherit").
- */
 function parseCssColor(raw) {
   if (!raw) return null;
   const s = raw.trim().toLowerCase();
   if (s === 'transparent' || s === 'inherit' || s === 'initial' || s === 'currentcolor') return null;
-
-  // Named color lookup
   if (CSS_NAMED_COLORS[s]) return parseCssColor(CSS_NAMED_COLORS[s]);
-
-  // #rgb shorthand → #rrggbb
   if (/^#[0-9a-f]{3}$/i.test(s)) {
     return { r: parseInt(s[1]+s[1],16), g: parseInt(s[2]+s[2],16), b: parseInt(s[3]+s[3],16) };
   }
-  // #rrggbb or #rrggbbaa
   if (/^#[0-9a-f]{6,8}$/i.test(s)) {
     return { r: parseInt(s.slice(1,3),16), g: parseInt(s.slice(3,5),16), b: parseInt(s.slice(5,7),16) };
   }
-  // rgb(r, g, b) or rgba(r, g, b, a)
   const m = s.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
   if (m) return { r: +m[1], g: +m[2], b: +m[3] };
-
   return null;
 }
 
-/**
- * Convert an sRGB channel (0-255) to its linearized value.
- * This is the IEC 61966-2-1 formula required by WCAG.
- */
 function linearize(c) {
   const s = c / 255;
   return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
 }
 
-/**
- * Compute relative luminance of an {r,g,b} color per WCAG 2.x.
- * Result is in [0, 1] where 0 = black and 1 = white.
- */
 function relativeLuminance({ r, g, b }) {
   return 0.2126 * linearize(r) + 0.7152 * linearize(g) + 0.0722 * linearize(b);
 }
 
-/**
- * Compute WCAG contrast ratio between two {r,g,b} colors.
- * Always returns a value ≥ 1 (lighter / darker + offset).
- */
 function contrastRatio(fg, bg) {
   const L1 = relativeLuminance(fg);
   const L2 = relativeLuminance(bg);
@@ -843,38 +1000,23 @@ function contrastRatio(fg, bg) {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-/**
- * Format {r,g,b} as #rrggbb for display / PDF.
- */
 function toHex({ r, g, b }) {
   return '#' + [r,g,b].map(x => x.toString(16).padStart(2,'0')).join('');
 }
 
-/**
- * Extract inline style properties from a DOM element parsed by DOMParser.
- * DOMParser does populate element.style for inline styles.
- */
 function getInlineColor(el, prop) {
-  // el.style is available from DOMParser in modern browsers
   const val = el.style && el.style.getPropertyValue ? el.style.getPropertyValue(prop) : '';
   return val ? parseCssColor(val) : null;
 }
 
-/**
- * Determine whether a font size (in CSS) qualifies as "large text" under WCAG.
- * Large text = ≥18pt (24px) regular, or ≥14pt (≈18.67px) bold.
- *   → threshold 4.5:1 applies to normal text; 3:1 applies to large text.
- */
 function isLargeText(el) {
   const style = el.style || {};
   const fs = style.fontSize || '';
   const fw = style.fontWeight || '';
   const bold = fw === 'bold' || fw === '700' || fw === '800' || fw === '900';
   const tag = el.tagName ? el.tagName.toLowerCase() : '';
-  // h1/h2 are always large; h3 bold counts as large
   if (tag === 'h1' || tag === 'h2') return true;
   if ((tag === 'h3' || bold) && tag.match(/^h[1-6]$/)) return true;
-  // Parse px/pt sizes
   const pxMatch = fs.match(/([\d.]+)px/);
   const ptMatch = fs.match(/([\d.]+)pt/);
   const sizePx = pxMatch ? +pxMatch[1] : ptMatch ? +ptMatch[1] * 1.333 : 0;
@@ -883,13 +1025,6 @@ function isLargeText(el) {
   return false;
 }
 
-/**
- * Walk ancestor chain (within the parsed doc) to find the nearest explicit
- * background color. Canvas pages default to a white (#ffffff) background,
- * so we use that as the ultimate fallback.
- *
- * We check both `background-color` and the `background` shorthand.
- */
 function resolveBackground(el) {
   let node = el;
   while (node && node.tagName) {
@@ -897,31 +1032,18 @@ function resolveBackground(el) {
     if (bg) return bg;
     node = node.parentElement;
   }
-  // Canvas default: white
   return { r: 255, g: 255, b: 255 };
 }
 
-/**
- * Scan all text-bearing elements in a parsed HTML document for color-contrast
- * violations. Returns an array of issue objects.
- *
- * Strategy:
- *   1. Walk every element that can contain visible text.
- *   2. If it has an inline `color` style, pair it with the resolved background.
- *   3. Compute contrast ratio and compare against the WCAG AA threshold.
- *   4. Deduplicate: only report each unique fg+bg pair once per page location.
- */
 function checkPageContrast(doc, loc) {
   const issues = [];
-  // Selector covers all elements that may bear user-authored text color
   const TEXT_TAGS = 'p,span,div,td,th,li,h1,h2,h3,h4,h5,h6,a,strong,em,b,i,label,caption,blockquote,pre,code,small,mark,s,del,ins';
   const elements = doc.querySelectorAll(TEXT_TAGS);
-  const seen = new Set(); // deduplicate identical fg+bg combos within this page
+  const seen = new Set();
 
   elements.forEach(el => {
     const fg = getInlineColor(el, 'color');
-    if (!fg) return; // no explicit color → inherits from parent, skip (can't resolve without getComputedStyle)
-
+    if (!fg) return;
     const bg = resolveBackground(el);
     const key = `${toHex(fg)}|${toHex(bg)}`;
     if (seen.has(key)) return;
@@ -933,7 +1055,6 @@ function checkPageContrast(doc, loc) {
     const label = large ? 'large text (≥18pt / ≥14pt bold)' : 'normal text';
 
     if (ratio < threshold) {
-      const snippet = (el.textContent || '').trim().substring(0, 50) || el.tagName;
       issues.push({
         loc,
         issue: `Contrast ratio ${ratio.toFixed(2)}:1 — below ${threshold}:1 required for ${label}. Foreground: ${toHex(fg)}, Background: ${toHex(bg)}.`,
@@ -942,7 +1063,6 @@ function checkPageContrast(doc, loc) {
         bgHex: toHex(bg),
         ratio: ratio.toFixed(2),
         threshold,
-        snippet
       });
     }
   });
@@ -950,109 +1070,206 @@ function checkPageContrast(doc, loc) {
   return issues;
 }
 
-// ─── MAIN AUDIT ──────────────────────────────────────────────────────────────
+// ─── Main audit ───────────────────────────────────────────────────────────────
+//
+// We produce TWO parallel data structures:
+//
+//   auditData.sections  — the classic "by check type" list (unchanged)
+//   auditData.byModule  — { moduleName → [{ pageName, findings[] }] }
+//                         where each finding = { checkLabel, wcag, status, title, detail, issues[] }
+//
+// Pages without a manifest entry are placed under the sentinel key
+// "__unattached__" which we sort to the end when rendering.
+
+const UNATTACHED_KEY = '__unattached__';
 
 async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc) {
   const parser = new DOMParser();
-  const results = { sections: [] };
+  const results = { sections: [], byModule: {} };
 
   let totalImages = 0, missingAlt = [], imagesOfText = [];
   let totalLinks = 0, badLinks = [];
   let missingTitles = [], missingHeadings = [];
   let tableIssues = [];
-  let contrastIssues = [];        // NEW: collected contrast failures
-  let contrastCheckedPages = 0;   // pages where we actually found styled color
+  let contrastIssues = [];
+  let contrastCheckedPages = 0;
   let contrastInspectedElements = 0;
   let totalPages = pages.length;
+
+  // Per-page finding accumulator for the module view
+  // pageFindings: path → { moduleName, pageName, findings: [] }
+  const pageFindings = {};
 
   for (const page of pages) {
     const doc = parser.parseFromString(page.content, 'text/html');
     const loc = `${page.module} → ${page.name}`;
+    const moduleName = page.inManifest ? page.module : UNATTACHED_KEY;
 
-    // Page titles
+    // Initialise per-page bucket
+    if (!pageFindings[page.path]) {
+      pageFindings[page.path] = { moduleName, pageName: page.name, findings: [] };
+    }
+    const pf = pageFindings[page.path];
+
+    // ── Page titles ──────────────────────────────────────────────────────────
     const title = doc.querySelector('title');
-    if (!title || !title.textContent.trim() || title.textContent.trim().toLowerCase() === 'untitled') {
+    const titleMissing = !title || !title.textContent.trim() || title.textContent.trim().toLowerCase() === 'untitled';
+    if (titleMissing) {
       missingTitles.push({ loc, issue: 'Page has no descriptive title tag', fix: 'Add a unique, descriptive <title> that reflects the page content.' });
     }
+    pf.findings.push({
+      checkLabel: 'Page title',
+      wcag: 'WCAG 2.4.2 Level A',
+      status: titleMissing ? 'fail' : 'pass',
+      title: titleMissing ? 'Missing descriptive title' : 'Descriptive title present',
+      issues: titleMissing ? [{ issue: 'Page has no descriptive title tag', fix: 'Add a unique, descriptive <title> that reflects the page content.' }] : []
+    });
 
-    // Images
+    // ── Images ───────────────────────────────────────────────────────────────
     const imgs = doc.querySelectorAll('img');
     totalImages += imgs.length;
+    const pageAltIssues = [];
     imgs.forEach(img => {
       const alt = img.getAttribute('alt');
       const src = img.getAttribute('src') || '';
       if (alt === null) {
-        missingAlt.push({ loc, issue: `Image missing alt attribute (src: ${src.split('/').pop() || 'unknown'})`, fix: 'Add descriptive alt text to the image, or alt="" if purely decorative.' });
+        const issue = { loc, issue: `Image missing alt attribute (src: ${src.split('/').pop() || 'unknown'})`, fix: 'Add descriptive alt text to the image, or alt="" if purely decorative.' };
+        missingAlt.push(issue);
+        pageAltIssues.push({ issue: issue.issue, fix: issue.fix });
       } else if (alt.length > 0 && /\.(png|jpg|jpeg|gif|svg)/i.test(alt)) {
-        missingAlt.push({ loc, issue: `Alt text appears to be a filename: "${alt.substring(0,40)}"`, fix: 'Replace filename with a meaningful description of the image content.' });
+        const issue = { loc, issue: `Alt text appears to be a filename: "${alt.substring(0,40)}"`, fix: 'Replace filename with a meaningful description of the image content.' };
+        missingAlt.push(issue);
+        pageAltIssues.push({ issue: issue.issue, fix: issue.fix });
       }
       if (/text|screenshot|slide/i.test(src) && (!alt || alt.length < 10)) {
-        imagesOfText.push({ loc, issue: `Possible image of text detected (src: ${src.split('/').pop()})`, fix: 'Replace images of text with actual HTML text, or provide full text content in alt attribute.' });
+        const issue = { loc, issue: `Possible image of text detected (src: ${src.split('/').pop()})`, fix: 'Replace images of text with actual HTML text, or provide full text content in alt attribute.' };
+        imagesOfText.push(issue);
+        pageAltIssues.push({ issue: issue.issue, fix: issue.fix });
       }
     });
+    if (imgs.length > 0) {
+      pf.findings.push({
+        checkLabel: 'Image alt text',
+        wcag: 'WCAG 1.1.1 / 1.4.5 Level A/AA',
+        status: pageAltIssues.length > 0 ? 'fail' : 'pass',
+        title: pageAltIssues.length > 0 ? `${pageAltIssues.length} alt text issue(s) on ${imgs.length} image(s)` : `All ${imgs.length} image(s) have alt attributes`,
+        issues: pageAltIssues
+      });
+    }
 
-    // Links
+    // ── Links ────────────────────────────────────────────────────────────────
     const links = doc.querySelectorAll('a');
     totalLinks += links.length;
+    const pageLinkIssues = [];
     links.forEach(a => {
       const txt = a.textContent.trim();
       const aria = a.getAttribute('aria-label') || '';
       if (!aria && (!txt || /^(click here|here|link|read more|more|this|download)$/i.test(txt))) {
-        badLinks.push({ loc, issue: `Non-descriptive link text: "${txt || '(empty)'}"`, fix: 'Use meaningful link text that describes the destination (e.g., "Download the course syllabus PDF").' });
+        const issue = { loc, issue: `Non-descriptive link text: "${txt || '(empty)'}"`, fix: 'Use meaningful link text that describes the destination (e.g., "Download the course syllabus PDF").' };
+        badLinks.push(issue);
+        pageLinkIssues.push({ issue: issue.issue, fix: issue.fix });
       }
     });
+    if (links.length > 0) {
+      pf.findings.push({
+        checkLabel: 'Link text',
+        wcag: 'WCAG 2.4.4 Level A',
+        status: pageLinkIssues.length > 0 ? 'fail' : 'pass',
+        title: pageLinkIssues.length > 0 ? `${pageLinkIssues.length} non-descriptive link(s) found` : `All ${links.length} link(s) have descriptive text`,
+        issues: pageLinkIssues
+      });
+    }
 
-    // Tables
+    // ── Tables ───────────────────────────────────────────────────────────────
     const tables = doc.querySelectorAll('table');
+    const pageTableIssues = [];
     tables.forEach(tbl => {
       const headers = tbl.querySelectorAll('th');
       const scope = Array.from(headers).some(h => h.getAttribute('scope'));
       if (!headers.length) {
-        tableIssues.push({ loc, issue: 'Data table found with no <th> header cells', fix: 'Mark header row cells as <th> elements with appropriate scope="col" or scope="row" attributes.' });
+        const issue = { loc, issue: 'Data table found with no <th> header cells', fix: 'Mark header row cells as <th> elements with appropriate scope="col" or scope="row" attributes.' };
+        tableIssues.push(issue);
+        pageTableIssues.push({ issue: issue.issue, fix: issue.fix });
       } else if (!scope) {
-        tableIssues.push({ loc, issue: 'Table has <th> headers but no scope attribute', fix: 'Add scope="col" or scope="row" to all <th> elements to clarify header direction.' });
+        const issue = { loc, issue: 'Table has <th> headers but no scope attribute', fix: 'Add scope="col" or scope="row" to all <th> elements to clarify header direction.' };
+        tableIssues.push(issue);
+        pageTableIssues.push({ issue: issue.issue, fix: issue.fix });
       }
     });
+    if (tables.length > 0) {
+      pf.findings.push({
+        checkLabel: 'Table accessibility',
+        wcag: 'WCAG 1.3.1 Level A',
+        status: pageTableIssues.length > 0 ? 'fail' : 'pass',
+        title: pageTableIssues.length > 0 ? `${pageTableIssues.length} table issue(s) found` : `${tables.length} table(s) look accessible`,
+        issues: pageTableIssues
+      });
+    }
 
-    // Headings
+    // ── Headings ─────────────────────────────────────────────────────────────
     const headings = doc.querySelectorAll('h1,h2,h3,h4,h5,h6');
+    const pageHeadingIssues = [];
     if (headings.length === 0 && doc.body && doc.body.textContent.trim().length > 200) {
-      missingHeadings.push({ loc, issue: 'Long content page has no heading structure', fix: 'Use HTML headings (H1–H3) to organize content into logical sections.' });
+      const issue = { loc, issue: 'Long content page has no heading structure', fix: 'Use HTML headings (H1–H3) to organize content into logical sections.' };
+      missingHeadings.push(issue);
+      pageHeadingIssues.push({ issue: issue.issue, fix: issue.fix });
     }
     let prevLevel = 0;
     headings.forEach(h => {
       const level = parseInt(h.tagName[1]);
       if (level > prevLevel + 1 && prevLevel > 0) {
-        missingHeadings.push({ loc, issue: `Heading level skipped: H${prevLevel} → H${level} ("${h.textContent.trim().substring(0,40)}")`, fix: `Don't skip heading levels. Use H${prevLevel+1} instead of H${level}.` });
+        const issue = { loc, issue: `Heading level skipped: H${prevLevel} → H${level} ("${h.textContent.trim().substring(0,40)}")`, fix: `Don't skip heading levels. Use H${prevLevel+1} instead of H${level}.` };
+        missingHeadings.push(issue);
+        pageHeadingIssues.push({ issue: issue.issue, fix: issue.fix });
       }
       prevLevel = level;
     });
+    pf.findings.push({
+      checkLabel: 'Heading structure',
+      wcag: 'WCAG 1.3.1 / 2.4.6 Level A/AA',
+      status: pageHeadingIssues.length > 0 ? 'fail' : 'pass',
+      title: pageHeadingIssues.length > 0 ? `${pageHeadingIssues.length} heading issue(s) found` : 'Heading structure looks correct',
+      issues: pageHeadingIssues
+    });
 
-    // ── Color Contrast (NEW) ──────────────────────────────────────────────
-    // Count styled elements so we can report coverage honestly
+    // ── Color contrast ────────────────────────────────────────────────────────
     const styledEls = doc.querySelectorAll('[style*="color"]');
     contrastInspectedElements += styledEls.length;
     if (styledEls.length > 0) contrastCheckedPages++;
 
     const pageContrastIssues = checkPageContrast(doc, loc);
     contrastIssues.push(...pageContrastIssues);
+
+    const pageContrastIssuesClean = pageContrastIssues.map(i => ({ issue: i.issue, fix: i.fix, fgHex: i.fgHex, bgHex: i.bgHex, ratio: i.ratio, threshold: i.threshold }));
+    if (styledEls.length > 0 || pageContrastIssues.length > 0) {
+      pf.findings.push({
+        checkLabel: 'Color contrast',
+        wcag: 'WCAG 1.4.3 Level AA',
+        status: pageContrastIssues.length > 0 ? 'fail' : 'pass',
+        title: pageContrastIssues.length > 0 ? `${pageContrastIssues.length} contrast failure(s) detected` : `${styledEls.length} inline-styled element(s) pass contrast`,
+        issues: pageContrastIssuesClean
+      });
+    }
+  }
+
+  // ── Build byModule from pageFindings ─────────────────────────────────────
+  for (const [path, pf] of Object.entries(pageFindings)) {
+    const key = pf.moduleName;
+    if (!results.byModule[key]) results.byModule[key] = [];
+    results.byModule[key].push({ pageName: pf.pageName, findings: pf.findings });
   }
 
   const hasVideos = mediaFiles.filter(f => /\.(mp4|mov|avi|webm)$/i.test(f)).length;
   const hasAudio  = mediaFiles.filter(f => /\.(mp3|wav|ogg)$/i.test(f)).length;
 
   // ── Build contrast check entry ────────────────────────────────────────────
-  // We distinguish three cases:
-  //   • No inline color styles found → can only partially audit; manual check still needed
-  //   • Inline styles found, all pass → pass (with caveat)
-  //   • Failures found → fail
   let contrastCheck;
   if (contrastIssues.length > 0) {
     contrastCheck = {
       status: 'fail',
       title: `${contrastIssues.length} color contrast failure(s) detected`,
       detail: `Scanned ${contrastInspectedElements} inline-styled text element(s) across ${totalPages} page(s). ` +
-              `Failures shown below. Note: colors inherited via CSS classes (not inline styles) require manual verification with a browser tool such as the WebAIM Contrast Checker.`,
+              `Colors inherited via CSS classes require manual verification with the WebAIM Contrast Checker.`,
       wcag: 'WCAG 1.4.3 Level AA',
       issues: contrastIssues
     };
@@ -1061,22 +1278,22 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc) {
       status: 'pass',
       title: `All ${contrastInspectedElements} inline-colored text element(s) pass contrast requirements`,
       detail: `Checked ${contrastInspectedElements} element(s) with explicit color styling across ${contrastCheckedPages} page(s). ` +
-              `Colors defined via CSS classes (not inline styles) cannot be checked statically — verify those on live pages with the WebAIM Contrast Checker.`,
+              `Colors defined via CSS classes require manual verification on live pages.`,
       wcag: 'WCAG 1.4.3 Level AA',
       issues: []
     };
   } else {
-    // No inline color styles at all — this is the manual-check fallback
     contrastCheck = {
       status: 'warn',
       title: 'No inline color styles found — manual contrast check required',
-      detail: `No inline color styling was detected across ${totalPages} page(s). Canvas courses typically apply color through the LMS theme or rich-text CSS classes, which are not present in the exported HTML. ` +
-              `Verify contrast on live pages using the WebAIM Contrast Checker (target: 4.5:1 for normal text, 3:1 for large text ≥18pt or ≥14pt bold).`,
+      detail: `No inline color styling detected across ${totalPages} page(s). Canvas courses typically apply color through the LMS theme or rich-text CSS classes. ` +
+              `Verify on live pages using the WebAIM Contrast Checker (4.5:1 for normal text, 3:1 for large text).`,
       wcag: 'WCAG 1.4.3 Level AA',
       issues: []
     };
   }
 
+  // ── Build sections (check-type view) ─────────────────────────────────────
   results.sections = [
     {
       id: 'titles',
@@ -1161,6 +1378,7 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc) {
   return results;
 }
 
+// ─── Count helpers ────────────────────────────────────────────────────────────
 function countByStatus(s) {
   let pass=0,fail=0,warn=0;
   for (const sec of s.sections) {
@@ -1173,14 +1391,15 @@ function countByStatus(s) {
   return {pass,fail,warn};
 }
 
-let currentFilter = 'all';
+// ─── Filter ───────────────────────────────────────────────────────────────────
 function filterResults(f, btn) {
   currentFilter = f;
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  renderSections();
+  if (auditData) renderSections();
 }
 
+// ─── Render dispatcher ────────────────────────────────────────────────────────
 function renderResults() {
   document.getElementById('upload-area').style.display = 'none';
   document.getElementById('results').style.display = 'block';
@@ -1188,9 +1407,15 @@ function renderResults() {
   document.getElementById('pass-count').textContent = pass;
   document.getElementById('fail-count').textContent = fail;
   document.getElementById('manual-count').textContent = warn;
-  renderSections();
+
+  if (currentView === 'modules') {
+    renderModuleView();
+  } else {
+    renderSections();
+  }
 }
 
+// ─── Check-type view ──────────────────────────────────────────────────────────
 function renderSections() {
   const body = document.getElementById('results-body');
   body.innerHTML = '';
@@ -1221,7 +1446,6 @@ function renderSections() {
 }
 
 function renderCheck(c) {
-  // SVG icons for each status — red X for fail, yellow ! for warn, green ✓ for pass
   const icons = {
     pass: `<svg width="18" height="18" viewBox="0 0 18 18" fill="none">
       <circle cx="9" cy="9" r="8.25" fill="#dcfce7" stroke="#16a34a" stroke-width="1.25"/>
@@ -1240,7 +1464,6 @@ function renderCheck(c) {
   const icon = icons[c.status] || icons.warn;
 
   const issueHtml = (c.issues||[]).map(i => {
-    // For contrast issues, show color swatches inline
     const swatchHtml = (i.fgHex && i.bgHex)
       ? `<div class="contrast-swatch">
            <span class="swatch-box" style="background:${i.bgHex}" title="Background: ${i.bgHex}"></span>
@@ -1277,151 +1500,419 @@ function toggleSection(id) {
   chev.classList.toggle('open', !hidden);
 }
 
+// ─── Module view ──────────────────────────────────────────────────────────────
+//
+// Sort module keys: regular modules alphabetically, UNATTACHED_KEY always last.
+function sortedModuleKeys(byModule) {
+  return Object.keys(byModule).sort((a, b) => {
+    if (a === UNATTACHED_KEY) return 1;
+    if (b === UNATTACHED_KEY) return -1;
+    return a.localeCompare(b);
+  });
+}
+
+// Summarise a module's pages into badge counts
+function moduleStats(pages) {
+  let fail=0, warn=0, pass=0;
+  for (const p of pages) {
+    for (const f of p.findings) {
+      if (f.status === 'fail') fail++;
+      else if (f.status === 'warn') warn++;
+      else pass++;
+    }
+  }
+  return {fail, warn, pass};
+}
+
+function renderModuleView() {
+  const body = document.getElementById('results-body');
+  body.innerHTML = '';
+
+  const keys = sortedModuleKeys(auditData.byModule);
+  if (keys.length === 0) {
+    body.innerHTML = '<div class="empty-state">No per-page findings to display. Run the audit first.</div>';
+    return;
+  }
+
+  keys.forEach((key, mi) => {
+    const pages = auditData.byModule[key];
+    const isUnattached = key === UNATTACHED_KEY;
+    const displayName = isUnattached ? 'Not attached to a module' : key;
+    const stats = moduleStats(pages);
+    const moduleId = `mod-${mi}`;
+
+    const div = document.createElement('div');
+    div.className = 'module-block' + (isUnattached ? ' unattached' : '');
+
+    const badgesHtml = [
+      stats.fail > 0  ? `<span class="badge badge-fail">${stats.fail} issue${stats.fail>1?'s':''}</span>` : '',
+      stats.warn > 0  ? `<span class="badge badge-warn">${stats.warn} manual</span>` : '',
+      stats.pass > 0  ? `<span class="badge badge-pass">${stats.pass} pass</span>` : '',
+    ].join('');
+
+    const moduleIconSvg = isUnattached
+      ? `<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1v11M1 6.5h11" stroke="var(--c-ink-ghost)" stroke-width="1.5" stroke-linecap="round"/></svg>`
+      : `<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1" y="1" width="11" height="11" rx="2" stroke="var(--c-accent)" stroke-width="1.3"/><path d="M3.5 4.5h6M3.5 6.5h6M3.5 8.5h4" stroke="var(--c-accent)" stroke-width="1.2" stroke-linecap="round"/></svg>`;
+
+    div.innerHTML = `
+      <div class="module-hdr" onclick="toggleModule('${moduleId}')">
+        <div class="module-name">
+          <div class="module-icon${isUnattached?' unattached':''}">${moduleIconSvg}</div>
+          <h3>${escHtml(displayName)}</h3>
+          <span style="font-size:11px;color:var(--c-ink-ghost);font-weight:400">${pages.length} page${pages.length!==1?'s':''}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="badges">${badgesHtml}</div>
+          <span class="chevron" id="chev-${moduleId}">▼</span>
+        </div>
+      </div>
+      <div class="module-pages" id="body-${moduleId}">
+        ${pages.map((p, pi) => renderPageBlock(p, `${moduleId}-p${pi}`)).join('')}
+      </div>`;
+    body.appendChild(div);
+  });
+}
+
+function renderPageBlock(page, pid) {
+  const failCt = page.findings.filter(f => f.status === 'fail').length;
+  const warnCt = page.findings.filter(f => f.status === 'warn').length;
+  const passCt = page.findings.filter(f => f.status === 'pass').length;
+
+  // Determine overall status icon for the page header
+  const overallStatus = failCt > 0 ? 'fail' : warnCt > 0 ? 'warn' : 'pass';
+  const smallIcon = {
+    pass: `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#dcfce7" stroke="#16a34a" stroke-width="1.25"/><path d="M5.5 9l2.5 2.5 4.5-4.5" stroke="#16a34a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    fail: `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#fee2e2" stroke="#dc2626" stroke-width="1.25"/><path d="M6 6l6 6M12 6l-6 6" stroke="#dc2626" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+    warn: `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#fef3c7" stroke="#d97706" stroke-width="1.25"/><path d="M9 5.5v4" stroke="#d97706" stroke-width="1.7" stroke-linecap="round"/><circle cx="9" cy="12.5" r=".9" fill="#d97706"/></svg>`,
+  }[overallStatus];
+
+  const badgesHtml = [
+    failCt > 0 ? `<span class="badge badge-fail">${failCt} issue${failCt>1?'s':''}</span>` : '',
+    warnCt > 0 ? `<span class="badge badge-warn">${warnCt} manual</span>` : '',
+    passCt > 0 ? `<span class="badge badge-pass">${passCt} pass</span>` : '',
+  ].join('');
+
+  const findingsHtml = page.findings.map(f => renderFinding(f)).join('');
+
+  return `<div class="page-block">
+    <div class="page-hdr" onclick="togglePage('${pid}')">
+      <h4>${smallIcon} ${escHtml(page.pageName)}</h4>
+      <div style="display:flex;align-items:center;gap:6px">
+        <div class="badges">${badgesHtml}</div>
+        <span class="chevron" id="chev-${pid}" style="font-size:9px">▼</span>
+      </div>
+    </div>
+    <div class="page-body" id="body-${pid}" style="display:none">
+      ${findingsHtml || '<div style="font-size:12px;color:var(--c-ink-muted);padding:.3rem 0">No findings recorded for this page.</div>'}
+    </div>
+  </div>`;
+}
+
+function renderFinding(f) {
+  const icons = {
+    pass: `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#dcfce7" stroke="#16a34a" stroke-width="1.25"/><path d="M5.5 9l2.5 2.5 4.5-4.5" stroke="#16a34a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    fail: `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#fee2e2" stroke="#dc2626" stroke-width="1.25"/><path d="M6 6l6 6M12 6l-6 6" stroke="#dc2626" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+    warn: `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#fef3c7" stroke="#d97706" stroke-width="1.25"/><path d="M9 5.5v4" stroke="#d97706" stroke-width="1.7" stroke-linecap="round"/><circle cx="9" cy="12.5" r=".9" fill="#d97706"/></svg>`,
+  };
+
+  const issueHtml = (f.issues || []).map(i => {
+    const swatchHtml = (i.fgHex && i.bgHex)
+      ? `<div class="contrast-swatch" style="margin-top:3px">
+           <span class="swatch-box" style="background:${i.bgHex}"></span>
+           <span style="font-size:9px;color:var(--c-ink-ghost)">BG</span>
+           <span class="swatch-box" style="background:${i.fgHex}"></span>
+           <span style="font-size:9px;color:var(--c-ink-ghost)">FG</span>
+           <span class="contrast-ratio-pill">${i.ratio}:1 (need ${i.threshold}:1)</span>
+         </div>`
+      : '';
+    const cls = f.status === 'fail' ? 'mod-issue-item' : 'mod-warn-item';
+    return `<div class="${cls}">
+      ${escHtml(i.issue)}
+      ${swatchHtml}
+      ${i.fix ? `<div class="fix">Suggestion: ${escHtml(i.fix)}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  return `<div class="finding-row">
+    <div class="finding-label" style="display:flex;align-items:center;gap:4px;padding-top:1px">
+      ${icons[f.status] || icons.warn}
+      <span>${escHtml(f.checkLabel)}</span>
+    </div>
+    <div class="finding-content">
+      <div class="finding-title">${escHtml(f.title)}</div>
+      <div style="font-size:10px;color:var(--c-ink-ghost);font-family:var(--font-mono);margin-top:1px">${f.wcag}</div>
+      ${issueHtml}
+    </div>
+  </div>`;
+}
+
+function toggleModule(id) {
+  const body = document.getElementById('body-'+id);
+  const chev = document.getElementById('chev-'+id);
+  const hidden = body.style.display === 'none';
+  body.style.display = hidden ? '' : 'none';
+  chev.classList.toggle('open', !hidden);
+}
+
+function togglePage(id) {
+  const body = document.getElementById('body-'+id);
+  const chev = document.getElementById('chev-'+id);
+  const hidden = body.style.display === 'none';
+  body.style.display = hidden ? '' : 'none';
+  chev.classList.toggle('open', !hidden);
+}
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── PDF export ───────────────────────────────────────────────────────────────
+//
+// The PDF mirrors whichever view is currently active.
+// In module view: sections are modules, sub-sections are pages, rows are findings.
+// In check view: the existing per-check rendering is used.
+
 function downloadPDF() {
   const {jsPDF} = window.jspdf;
   const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
   const W = 210, M = 15, CW = W - M*2;
   let y = 20;
 
+  // ── Title block
   doc.setFont('helvetica','bold');
   doc.setFontSize(16);
   doc.setTextColor(30,30,30);
-  doc.text('Canvas Course Accessibility Audit', M, y); y+=8;
+  doc.text('Canvas Course Accessibility Audit', M, y); y += 8;
 
   doc.setFont('helvetica','normal');
   doc.setFontSize(9);
   doc.setTextColor(100,100,100);
-  doc.text(`File: ${fileObj ? fileObj.name : 'Unknown'} | Generated: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}`, M, y); y+=5;
-  doc.text('WCAG 2.1 AA Standard', M, y); y+=10;
+  const viewLabel = currentView === 'modules' ? 'Organised by Module' : 'Organised by Check Type';
+  doc.text(`File: ${fileObj ? fileObj.name : 'Unknown'} | Generated: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})} | View: ${viewLabel}`, M, y); y += 5;
+  doc.text('WCAG 2.1 AA Standard', M, y); y += 10;
 
+  // ── Summary row
   const {pass,fail,warn} = countByStatus(auditData);
-  const sumData = [[`${pass} passed`,`${fail} issues`,`${warn} manual checks needed`]];
-  const sumColors = [[{r:22,g:101,b:52},{r:153,g:27,b:27},{r:120,g:82,b:12}]];
-  doc.setFontSize(10);
   const bw=52, bh=14, bx=[M,M+bw+4,M+(bw+4)*2];
-  bx.forEach((x,i)=>{
-    const txt = sumData[0][i].split(' ');
-    const num = txt[0], label = txt.slice(1).join(' ');
+  const sumData = [`${pass} passed`, `${fail} issues`, `${warn} manual checks needed`];
+  const sumColors = [{r:22,g:101,b:52},{r:153,g:27,b:27},{r:120,g:82,b:12}];
+  bx.forEach((x,i) => {
+    const parts = sumData[i].split(' ');
+    const num = parts[0], label = parts.slice(1).join(' ');
     doc.setFillColor(240,240,240);
     doc.roundedRect(x,y,bw,bh,2,2,'F');
     doc.setFont('helvetica','bold');
     doc.setFontSize(13);
-    doc.setTextColor(...Object.values(sumColors[0][i]));
-    doc.text(num,x+bw/2,y+6,{align:'center'});
+    doc.setTextColor(sumColors[i].r, sumColors[i].g, sumColors[i].b);
+    doc.text(num, x+bw/2, y+6, {align:'center'});
     doc.setFont('helvetica','normal');
     doc.setFontSize(8);
     doc.setTextColor(80,80,80);
-    doc.text(label,x+bw/2,y+11,{align:'center'});
-  }); y+=22;
+    doc.text(label, x+bw/2, y+11, {align:'center'});
+  });
+  y += 22;
+
+  if (currentView === 'modules') {
+    pdfModuleView(doc, W, M, CW, y);
+  } else {
+    pdfChecksView(doc, W, M, CW, y);
+  }
+
+  const pgCt = doc.getNumberOfPages();
+  for (let i=1; i<=pgCt; i++) {
+    doc.setPage(i);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(7);
+    doc.setTextColor(150,150,150);
+    doc.text(`Canvas Accessibility Audit — WCAG 2.1 AA — Page ${i} of ${pgCt}`, W/2, 292, {align:'center'});
+  }
+
+  doc.save(`canvas-accessibility-audit-${new Date().toISOString().slice(0,10)}.pdf`);
+}
+
+// ── PDF: by-module view ───────────────────────────────────────────────────────
+function pdfModuleView(doc, W, M, CW, startY) {
+  let y = startY;
+  const lineH = 4;
+
+  const keys = sortedModuleKeys(auditData.byModule);
+
+  for (const key of keys) {
+    const pages = auditData.byModule[key];
+    const isUnattached = key === UNATTACHED_KEY;
+    const displayName = isUnattached ? 'Not attached to a module' : key;
+    const stats = moduleStats(pages);
+
+    if (y > 260) { doc.addPage(); y = 20; }
+
+    // Module header band
+    doc.setFillColor(235, 240, 250);
+    doc.roundedRect(M, y, CW, 9, 1.5, 1.5, 'F');
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(11);
+    doc.setTextColor(15,23,60);
+    doc.text(displayName, M+4, y+6.2);
+
+    // Module stats (right-aligned)
+    const statsStr = [
+      stats.fail > 0  ? `${stats.fail} issue${stats.fail>1?'s':''}` : '',
+      stats.warn > 0  ? `${stats.warn} manual` : '',
+      stats.pass > 0  ? `${stats.pass} pass` : '',
+    ].filter(Boolean).join('  ·  ');
+    if (statsStr) {
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(8);
+      doc.setTextColor(80,80,100);
+      doc.text(statsStr, M+CW-2, y+6.2, {align:'right'});
+    }
+    y += 12;
+
+    for (const page of pages) {
+      if (y > 258) { doc.addPage(); y = 20; }
+
+      // Page sub-header
+      doc.setFillColor(248,249,251);
+      doc.roundedRect(M+2, y, CW-4, 7, 1, 1, 'F');
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(9);
+      doc.setTextColor(30,30,30);
+      doc.text(`📄  ${page.pageName}`, M+5, y+4.8);
+      y += 9;
+
+      for (const f of page.findings) {
+        if (y > 260) { doc.addPage(); y = 20; }
+
+        const statusLabel = f.status === 'pass' ? 'PASS' : f.status === 'fail' ? 'FAIL' : 'MANUAL';
+        const sc = f.status === 'pass' ? [22,101,52] : f.status === 'fail' ? [153,27,27] : [120,82,12];
+
+        // Check label + status pill
+        doc.setFont('helvetica','bold');
+        doc.setFontSize(7.5);
+        doc.setTextColor(...sc);
+        doc.text(`[${statusLabel}]`, M+5, y);
+        doc.setFont('helvetica','normal');
+        doc.setTextColor(50,50,50);
+        doc.text(f.checkLabel, M+22, y);
+        doc.setFont('helvetica','italic');
+        doc.setFontSize(6.5);
+        doc.setTextColor(130,130,130);
+        doc.text(f.wcag, M+22, y+3.5);
+        y += 5;
+
+        // Finding title
+        doc.setFont('helvetica','normal');
+        doc.setFontSize(7.5);
+        doc.setTextColor(30,30,30);
+        const titleLines = doc.splitTextToSize(f.title, CW-12);
+        doc.text(titleLines, M+8, y);
+        y += titleLines.length * lineH;
+
+        // Individual issues
+        for (const issue of (f.issues || [])) {
+          if (y > 260) { doc.addPage(); y = 20; }
+          const descLines = doc.splitTextToSize(`• ${issue.issue}`, CW-14);
+          const fixLines  = issue.fix ? doc.splitTextToSize(`  Suggestion: ${issue.fix}`, CW-14) : [];
+          const blockH = (descLines.length + fixLines.length) * lineH + (fixLines.length>0?2:0) + 4;
+          const bgColor = f.status === 'fail' ? [255,245,245] : [255,251,235];
+          doc.setFillColor(...bgColor);
+          doc.roundedRect(M+6, y-1, CW-10, blockH, 1, 1, 'F');
+
+          doc.setFont('helvetica','bold');
+          doc.setFontSize(7.5);
+          doc.setTextColor(...(f.status==='fail' ? [153,27,27] : [146,64,14]));
+          doc.text(descLines, M+8, y+2);
+          y += descLines.length * lineH + 1;
+
+          if (fixLines.length > 0) {
+            doc.setFont('helvetica','italic');
+            doc.setFontSize(7);
+            doc.setTextColor(90,90,90);
+            doc.text(fixLines, M+8, y+1);
+            y += fixLines.length * lineH + 1;
+          }
+          y += 2;
+        }
+        y += 2;
+      }
+      y += 3;
+    }
+    y += 4;
+  }
+}
+
+// ── PDF: by-check view (original) ────────────────────────────────────────────
+function pdfChecksView(doc, W, M, CW, startY) {
+  let y = startY;
+  const lineH = 4;
 
   for (const sec of auditData.sections) {
-    if (y>265){doc.addPage();y=20;}
+    if (y > 265) { doc.addPage(); y = 20; }
     doc.setFillColor(245,245,245);
-    doc.roundedRect(M,y,CW,7,1,1,'F');
+    doc.roundedRect(M, y, CW, 7, 1, 1, 'F');
     doc.setFont('helvetica','bold');
     doc.setFontSize(10);
     doc.setTextColor(30,30,30);
-    doc.text(sec.label,M+3,y+5); y+=10;
+    doc.text(sec.label, M+3, y+5);
+    y += 10;
 
     for (const c of sec.checks) {
-      if (y>265){doc.addPage();y=20;}
+      if (y > 265) { doc.addPage(); y = 20; }
       const statusLabel = c.status==='pass'?'PASS':c.status==='fail'?'FAIL':'MANUAL';
       const sc = c.status==='pass'?[22,101,52]:c.status==='fail'?[153,27,27]:[120,82,12];
       doc.setFont('helvetica','bold');
       doc.setFontSize(8);
       doc.setTextColor(...sc);
-      doc.text(`[${statusLabel}]`,M+2,y); 
+      doc.text(`[${statusLabel}]`, M+2, y);
       doc.setFont('helvetica','normal');
       doc.setTextColor(30,30,30);
       const titleLines = doc.splitTextToSize(c.title, CW-22);
-      doc.text(titleLines,M+20,y); y+=titleLines.length*4.5;
+      doc.text(titleLines, M+20, y);
+      y += titleLines.length * 4.5;
 
       if (c.detail) {
         doc.setFontSize(7.5);
         doc.setTextColor(80,80,80);
-        const dl = doc.splitTextToSize(c.detail,CW-6);
-        doc.text(dl,M+3,y); y+=dl.length*4+1;
+        const dl = doc.splitTextToSize(c.detail, CW-6);
+        doc.text(dl, M+3, y);
+        y += dl.length * lineH + 1;
       }
       doc.setFontSize(7);
       doc.setTextColor(130,130,130);
-      doc.text(c.wcag,M+3,y); y+=5;
+      doc.text(c.wcag, M+3, y);
+      y += 5;
 
       for (const issue of (c.issues||[])) {
-        if (y>265){doc.addPage();y=20;}
-
-        // Wrap each field independently — concatenating loc+issue into one string
-        // caused jsPDF to overrun the margin when loc contained long path strings
-        // with no natural word-break characters.
+        if (y > 265) { doc.addPage(); y = 20; }
         const locLines  = doc.splitTextToSize(issue.loc  || '', CW-10);
         const descLines = doc.splitTextToSize(issue.issue || '', CW-10);
-        const fixLines  = issue.fix
-          ? doc.splitTextToSize(`Suggestion: ${issue.fix}`, CW-10)
-          : [];
-
-        // Compute block height now that we know all line counts.
-        // lineH=4mm, plus 6mm for top+bottom padding, plus 3mm gap before fix.
-        const lineH = 4;
-        const blockH = (locLines.length + descLines.length + fixLines.length) * lineH
-                       + (fixLines.length > 0 ? 3 : 0)
-                       + 6;
-
-        doc.setFillColor(
-          c.status==='fail' ? 255 : 255,
-          c.status==='fail' ? 240 : 245,
-          c.status==='fail' ? 240 : 220
-        );
+        const fixLines  = issue.fix ? doc.splitTextToSize(`Suggestion: ${issue.fix}`, CW-10) : [];
+        const blockH = (locLines.length + descLines.length + fixLines.length) * lineH + (fixLines.length>0?3:0) + 6;
+        doc.setFillColor(c.status==='fail'?255:255, c.status==='fail'?240:245, c.status==='fail'?240:220);
         doc.roundedRect(M+3, y-2, CW-6, blockH, 1, 1, 'F');
-
         let ty = y + 2;
-
-        // Location — small italic, coloured, reads as metadata
         doc.setFont('helvetica','italic');
         doc.setFontSize(7);
-        doc.setTextColor(
-          c.status==='fail' ? 160 : 120,
-          c.status==='fail' ?  30 :  70,
-          c.status==='fail' ?  30 :   0
-        );
+        doc.setTextColor(c.status==='fail'?160:120, c.status==='fail'?30:70, c.status==='fail'?30:0);
         doc.text(locLines, M+5, ty);
         ty += locLines.length * lineH;
-
-        // Issue description — bold, slightly larger
         doc.setFont('helvetica','bold');
         doc.setFontSize(7.5);
-        doc.setTextColor(
-          c.status==='fail' ? 140 : 100,
-          c.status==='fail' ?  20 :  60,
-          c.status==='fail' ?  20 :   0
-        );
+        doc.setTextColor(c.status==='fail'?140:100, c.status==='fail'?20:60, c.status==='fail'?20:0);
         doc.text(descLines, M+5, ty);
         ty += descLines.length * lineH;
-
-        // Fix / suggestion — normal weight, muted
         if (fixLines.length > 0) {
           ty += 1;
           doc.setFont('helvetica','italic');
           doc.setFontSize(7);
-          doc.setTextColor(90, 90, 90);
+          doc.setTextColor(90,90,90);
           doc.text(fixLines, M+5, ty);
-          ty += fixLines.length * lineH;
+          ty += fixLines.length * lineH + 1;
         }
-
         y = ty + 3;
       }
-      y+=2;
+      y += 2;
     }
-    y+=3;
+    y += 3;
   }
-
-  const pgCt = doc.getNumberOfPages();
-  for(let i=1;i<=pgCt;i++){
-    doc.setPage(i);
-    doc.setFont('helvetica','normal');
-    doc.setFontSize(7);
-    doc.setTextColor(150,150,150);
-    doc.text(`Canvas Accessibility Audit — WCAG 2.1 AA — Page ${i} of ${pgCt}`,W/2,292,{align:'center'});
-  }
-
-  doc.save(`canvas-accessibility-audit-${new Date().toISOString().slice(0,10)}.pdf`);
 }
 </script>

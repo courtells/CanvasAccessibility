@@ -525,7 +525,7 @@ body{
   letter-spacing: .02em;
 }
 
-/* ── Issue / warning cards ────────────────────────────────────────────────── */
+/* ── Issue / warning cards — black text for contrast compliance ────────────── */
 .issue-item, .warn-item{
   border-radius: var(--r-sm);
   padding: .55rem .8rem;
@@ -540,6 +540,7 @@ body{
   background: #fffbeb;
   border-color: var(--c-warn);
 }
+/* Location labels: muted neutral, still high-contrast on light backgrounds */
 .issue-item .issue-loc,
 .warn-item .issue-loc{
   font-size: 10.5px;
@@ -547,13 +548,16 @@ body{
   margin-bottom: 2px;
   font-family: var(--font-mono);
   letter-spacing: .02em;
+  color: var(--c-ink-soft);
 }
-.issue-item .issue-loc{color: var(--c-fail)}
-.warn-item .issue-loc{color: var(--c-warn)}
+/* Issue/warn description text — black for WCAG contrast compliance */
 .issue-item .issue-desc,
-.warn-item .issue-desc{font-size: 12px; line-height: 1.55; font-weight: 400}
-.issue-item .issue-desc{color: #991b1b}
-.warn-item .issue-desc{color: #92400e}
+.warn-item .issue-desc{
+  font-size: 12px;
+  line-height: 1.55;
+  font-weight: 400;
+  color: var(--c-ink);
+}
 .issue-item .issue-fix,
 .warn-item .issue-fix{
   font-size: 11px;
@@ -563,7 +567,7 @@ body{
   line-height: 1.5;
 }
 
-/* Module-view issue cards (no loc since we already show page context) */
+/* Module-view issue cards — black text for contrast compliance */
 .mod-issue-item, .mod-warn-item, .mod-pass-item{
   border-radius: var(--r-sm);
   padding: .45rem .7rem;
@@ -571,8 +575,8 @@ body{
   border-left: 2.5px solid transparent;
   font-size: 12px;
 }
-.mod-issue-item{ background: #fff5f5; border-color: var(--c-fail); color: #991b1b; }
-.mod-warn-item{  background: #fffbeb; border-color: var(--c-warn);  color: #92400e; }
+.mod-issue-item{ background: #fff5f5; border-color: var(--c-fail); color: var(--c-ink); }
+.mod-warn-item{  background: #fffbeb; border-color: var(--c-warn);  color: var(--c-ink); }
 .mod-pass-item{  background: var(--c-pass-bg); border-color: var(--c-pass); color: #14532d; }
 .mod-issue-item .fix, .mod-warn-item .fix{
   font-size: 11px;
@@ -802,9 +806,6 @@ function setView(v) {
   currentView = v;
   document.getElementById('view-checks-btn').classList.toggle('active', v === 'checks');
   document.getElementById('view-modules-btn').classList.toggle('active', v === 'modules');
-  // Module view has its own built-in "all" scope, so filter bar is less relevant
-  // but we keep it visible in both modes — it applies in checks view and is
-  // shown as informational context in module view.
   renderResults();
 }
 
@@ -927,6 +928,13 @@ function inferModule(path) {
   const parts = path.split('/');
   if (parts.length > 1) return parts[0];
   return 'Root';
+}
+
+// ─── Link text helpers ────────────────────────────────────────────────────────
+// Returns true if the visible link text is a bare URL
+function looksLikeUrl(txt) {
+  return /^(https?:\/\/|www\.)\S+/i.test(txt) ||
+         /^\S+\.(com|org|edu|gov|net|io)(\/\S*)?$/i.test(txt);
 }
 
 // ─── Color contrast engine ────────────────────────────────────────────────────
@@ -1071,16 +1079,6 @@ function checkPageContrast(doc, loc) {
 }
 
 // ─── Main audit ───────────────────────────────────────────────────────────────
-//
-// We produce TWO parallel data structures:
-//
-//   auditData.sections  — the classic "by check type" list (unchanged)
-//   auditData.byModule  — { moduleName → [{ pageName, findings[] }] }
-//                         where each finding = { checkLabel, wcag, status, title, detail, issues[] }
-//
-// Pages without a manifest entry are placed under the sentinel key
-// "__unattached__" which we sort to the end when rendering.
-
 const UNATTACHED_KEY = '__unattached__';
 
 async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc) {
@@ -1096,8 +1094,6 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc) {
   let contrastInspectedElements = 0;
   let totalPages = pages.length;
 
-  // Per-page finding accumulator for the module view
-  // pageFindings: path → { moduleName, pageName, findings: [] }
   const pageFindings = {};
 
   for (const page of pages) {
@@ -1105,7 +1101,6 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc) {
     const loc = `${page.module} → ${page.name}`;
     const moduleName = page.inManifest ? page.module : UNATTACHED_KEY;
 
-    // Initialise per-page bucket
     if (!pageFindings[page.path]) {
       pageFindings[page.path] = { moduleName, pageName: page.name, findings: [] };
     }
@@ -1157,15 +1152,20 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc) {
       });
     }
 
-    // ── Links ────────────────────────────────────────────────────────────────
+    // ── Links — flag generic text AND raw URLs ────────────────────────────────
     const links = doc.querySelectorAll('a');
     totalLinks += links.length;
     const pageLinkIssues = [];
     links.forEach(a => {
       const txt = a.textContent.trim();
       const aria = a.getAttribute('aria-label') || '';
-      if (!aria && (!txt || /^(click here|here|link|read more|more|this|download)$/i.test(txt))) {
+      if (aria) return; // aria-label present — skip
+      if (!txt || /^(click here|here|link|read more|more|this|download)$/i.test(txt)) {
         const issue = { loc, issue: `Non-descriptive link text: "${txt || '(empty)'}"`, fix: 'Use meaningful link text that describes the destination (e.g., "Download the course syllabus PDF").' };
+        badLinks.push(issue);
+        pageLinkIssues.push({ issue: issue.issue, fix: issue.fix });
+      } else if (looksLikeUrl(txt)) {
+        const issue = { loc, issue: `Link text is a raw URL: "${txt.length > 60 ? txt.substring(0,60)+'…' : txt}"`, fix: 'Replace the URL with a descriptive label (e.g., "Course syllabus" instead of the full URL).' };
         badLinks.push(issue);
         pageLinkIssues.push({ issue: issue.issue, fix: issue.fix });
       }
@@ -1259,8 +1259,24 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc) {
     results.byModule[key].push({ pageName: pf.pageName, findings: pf.findings });
   }
 
-  const hasVideos = mediaFiles.filter(f => /\.(mp4|mov|avi|webm)$/i.test(f)).length;
-  const hasAudio  = mediaFiles.filter(f => /\.(mp3|wav|ogg)$/i.test(f)).length;
+  const videoFiles = mediaFiles.filter(f => /\.(mp4|mov|avi|webm)$/i.test(f));
+  const audioFiles = mediaFiles.filter(f => /\.(mp3|wav|ogg)$/i.test(f));
+  const hasVideos = videoFiles.length;
+  const hasAudio  = audioFiles.length;
+
+  // Build media file issue lists (name + path for display)
+  const videoIssues = videoFiles.map(f => {
+    const parts = f.split('/');
+    const name = parts[parts.length - 1];
+    const folder = parts.length > 1 ? parts.slice(0, -1).join('/') : 'root';
+    return { loc: folder, issue: name, fix: '' };
+  });
+  const audioIssues = audioFiles.map(f => {
+    const parts = f.split('/');
+    const name = parts[parts.length - 1];
+    const folder = parts.length > 1 ? parts.slice(0, -1).join('/') : 'root';
+    return { loc: folder, issue: name, fix: '' };
+  });
 
   // ── Build contrast check entry ────────────────────────────────────────────
   let contrastCheck;
@@ -1319,7 +1335,7 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc) {
       label: 'Descriptive link text (WCAG 2.4.4)',
       checks: badLinks.length === 0
         ? [{ status: totalLinks > 0 ? 'pass' : 'warn', title: totalLinks > 0 ? `All ${totalLinks} link(s) have descriptive text` : 'No links found to check', detail: `${totalLinks} link(s) scanned across ${totalPages} page(s).`, wcag: 'WCAG 2.4.4 Level A', issues: [] }]
-        : [{ status: 'fail', title: `${badLinks.length} non-descriptive link(s) found`, detail: `${totalLinks} link(s) checked.`, wcag: 'WCAG 2.4.4 Level A', issues: badLinks }]
+        : [{ status: 'fail', title: `${badLinks.length} non-descriptive link(s) found`, detail: `${totalLinks} link(s) checked. Flagged: generic text (e.g. "click here", "here"), empty text, and raw URLs used as link labels.`, wcag: 'WCAG 2.4.4 Level A', issues: badLinks }]
     },
     {
       id: 'color-contrast',
@@ -1351,17 +1367,17 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc) {
     {
       id: 'captions',
       label: 'Video captions (WCAG 1.2.2)',
-      checks: [{ status: hasVideos > 0 ? 'warn' : 'pass', title: hasVideos > 0 ? `${hasVideos} video file(s) found — captions require manual verification` : 'No video files detected in this export', detail: hasVideos > 0 ? 'Verify that all videos have accurate captions (not auto-generated only). Captions should include all speech, speaker identification, and relevant sounds.' : 'If videos are embedded via YouTube, Kaltura, or external links, verify captions on those platforms directly.', wcag: 'WCAG 1.2.2 Level A', issues: [] }]
+      checks: [{ status: hasVideos > 0 ? 'warn' : 'pass', title: hasVideos > 0 ? `${hasVideos} video file(s) found — captions require manual verification` : 'No video files detected in this export', detail: hasVideos > 0 ? 'Verify that all videos have accurate captions (not auto-generated only). Captions should include all speech, speaker identification, and relevant sounds.' : 'If videos are embedded via YouTube, Kaltura, or external links, verify captions on those platforms directly.', wcag: 'WCAG 1.2.2 Level A', issues: videoIssues }]
     },
     {
       id: 'transcripts',
       label: 'Transcripts for audio/video (WCAG 1.2.1)',
-      checks: [{ status: (hasVideos > 0 || hasAudio > 0) ? 'warn' : 'pass', title: (hasVideos > 0 || hasAudio > 0) ? `${hasVideos + hasAudio} media file(s) — transcripts require manual verification` : 'No local media files detected', detail: 'All audio-only and video content must have an accessible text transcript. Verify that a linked transcript is available for each media item.', wcag: 'WCAG 1.2.1 Level A', issues: [] }]
+      checks: [{ status: (hasVideos > 0 || hasAudio > 0) ? 'warn' : 'pass', title: (hasVideos > 0 || hasAudio > 0) ? `${hasVideos + hasAudio} media file(s) — transcripts require manual verification` : 'No local media files detected', detail: 'All audio-only and video content must have an accessible text transcript. Verify that a linked transcript is available for each media item.', wcag: 'WCAG 1.2.1 Level A', issues: [...videoIssues, ...audioIssues] }]
     },
     {
       id: 'audiodesc',
       label: 'Audio descriptions (WCAG 1.2.3, 1.2.5)',
-      checks: [{ status: hasVideos > 0 ? 'warn' : 'pass', title: hasVideos > 0 ? 'Audio descriptions require manual review' : 'No video files detected in this export', detail: 'Videos with important on-screen visual information must have audio descriptions or a text alternative. Review each video to confirm spoken audio fully conveys visual content, or that an alternative exists.', wcag: 'WCAG 1.2.3 Level A / 1.2.5 Level AA', issues: [] }]
+      checks: [{ status: hasVideos > 0 ? 'warn' : 'pass', title: hasVideos > 0 ? 'Audio descriptions require manual review' : 'No video files detected in this export', detail: 'Videos with important on-screen visual information must have audio descriptions or a text alternative. Review each video to confirm spoken audio fully conveys visual content, or that an alternative exists.', wcag: 'WCAG 1.2.3 Level A / 1.2.5 Level AA', issues: videoIssues }]
     },
     {
       id: 'flashing',
@@ -1464,6 +1480,16 @@ function renderCheck(c) {
   const icon = icons[c.status] || icons.warn;
 
   const issueHtml = (c.issues||[]).map(i => {
+    // Media file listing rows (no fix text, loc = folder, issue = filename)
+    if (i.fix === '' && i.loc && i.issue && !i.issue.includes(' ')) {
+      return `<div class="warn-item" style="display:flex;align-items:center;gap:8px;padding:.4rem .8rem">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="flex-shrink:0"><path d="M7.5 1H3a1 1 0 00-1 1v9a1 1 0 001 1h7a1 1 0 001-1V4.5L7.5 1z" stroke="var(--c-warn)" stroke-width="1.2"/><path d="M7.5 1v3.5H11" stroke="var(--c-warn)" stroke-width="1.2"/></svg>
+        <div>
+          <div style="font-size:10.5px;font-family:var(--font-mono);font-weight:600;color:var(--c-ink)">${escHtml(i.issue)}</div>
+          <div style="font-size:10px;color:var(--c-ink-muted);font-family:var(--font-mono)">${escHtml(i.loc)}/</div>
+        </div>
+      </div>`;
+    }
     const swatchHtml = (i.fgHex && i.bgHex)
       ? `<div class="contrast-swatch">
            <span class="swatch-box" style="background:${i.bgHex}" title="Background: ${i.bgHex}"></span>
@@ -1501,8 +1527,6 @@ function toggleSection(id) {
 }
 
 // ─── Module view ──────────────────────────────────────────────────────────────
-//
-// Sort module keys: regular modules alphabetically, UNATTACHED_KEY always last.
 function sortedModuleKeys(byModule) {
   return Object.keys(byModule).sort((a, b) => {
     if (a === UNATTACHED_KEY) return 1;
@@ -1511,7 +1535,6 @@ function sortedModuleKeys(byModule) {
   });
 }
 
-// Summarise a module's pages into badge counts
 function moduleStats(pages) {
   let fail=0, warn=0, pass=0;
   for (const p of pages) {
@@ -1578,7 +1601,6 @@ function renderPageBlock(page, pid) {
   const warnCt = page.findings.filter(f => f.status === 'warn').length;
   const passCt = page.findings.filter(f => f.status === 'pass').length;
 
-  // Determine overall status icon for the page header
   const overallStatus = failCt > 0 ? 'fail' : warnCt > 0 ? 'warn' : 'pass';
   const smallIcon = {
     pass: `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#dcfce7" stroke="#16a34a" stroke-width="1.25"/><path d="M5.5 9l2.5 2.5 4.5-4.5" stroke="#16a34a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
@@ -1667,18 +1689,12 @@ function escHtml(s) {
 }
 
 // ─── PDF export ───────────────────────────────────────────────────────────────
-//
-// The PDF mirrors whichever view is currently active.
-// In module view: sections are modules, sub-sections are pages, rows are findings.
-// In check view: the existing per-check rendering is used.
-
 function downloadPDF() {
   const {jsPDF} = window.jspdf;
   const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
   const W = 210, M = 15, CW = W - M*2;
   let y = 20;
 
-  // ── Title block
   doc.setFont('helvetica','bold');
   doc.setFontSize(16);
   doc.setTextColor(30,30,30);
@@ -1691,7 +1707,6 @@ function downloadPDF() {
   doc.text(`File: ${fileObj ? fileObj.name : 'Unknown'} | Generated: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})} | View: ${viewLabel}`, M, y); y += 5;
   doc.text('WCAG 2.1 AA Standard', M, y); y += 10;
 
-  // ── Summary row
   const {pass,fail,warn} = countByStatus(auditData);
   const bw=52, bh=14, bx=[M,M+bw+4,M+(bw+4)*2];
   const sumData = [`${pass} passed`, `${fail} issues`, `${warn} manual checks needed`];
@@ -1730,10 +1745,40 @@ function downloadPDF() {
   doc.save(`canvas-accessibility-audit-${new Date().toISOString().slice(0,10)}.pdf`);
 }
 
+// ── PDF helpers ───────────────────────────────────────────────────────────────
+const PDF_BOTTOM = 272; // safe bottom margin (A4 = 297mm, footer at 292)
+
+function pdfCheckbox(doc, x, y, checked) {
+  const s = 3.2;
+  doc.setDrawColor(160,160,160);
+  doc.setLineWidth(0.4);
+  doc.rect(x, y - s + 0.5, s, s);
+  if (checked) {
+    doc.setDrawColor(80,80,80);
+    doc.setLineWidth(0.6);
+    doc.line(x+0.5, y-s+2, x+1.4, y-0.5);
+    doc.line(x+1.4, y-0.5, x+s-0.3, y-s+0.7);
+  }
+  doc.setLineWidth(0.2);
+}
+
+function pdfSafeText(doc, lines, x, y, lineH, maxY) {
+  // Render lines, adding a new page if we'd overflow
+  for (const line of (Array.isArray(lines) ? lines : [lines])) {
+    if (y > maxY) { doc.addPage(); y = 20; }
+    doc.text(line, x, y);
+    y += lineH;
+  }
+  return y;
+}
+
 // ── PDF: by-module view ───────────────────────────────────────────────────────
 function pdfModuleView(doc, W, M, CW, startY) {
   let y = startY;
   const lineH = 4;
+  const INNER = CW - 16; // text width inside issue block (leaves room for checkbox)
+  const CBX   = M + 6;   // checkbox x
+  const TXT   = M + 11;  // text start after checkbox
 
   const keys = sortedModuleKeys(auditData.byModule);
 
@@ -1743,17 +1788,15 @@ function pdfModuleView(doc, W, M, CW, startY) {
     const displayName = isUnattached ? 'Not attached to a module' : key;
     const stats = moduleStats(pages);
 
-    if (y > 260) { doc.addPage(); y = 20; }
+    if (y > PDF_BOTTOM - 10) { doc.addPage(); y = 20; }
 
-    // Module header band
     doc.setFillColor(235, 240, 250);
     doc.roundedRect(M, y, CW, 9, 1.5, 1.5, 'F');
     doc.setFont('helvetica','bold');
     doc.setFontSize(11);
     doc.setTextColor(15,23,60);
-    doc.text(displayName, M+4, y+6.2);
+    doc.text(doc.splitTextToSize(displayName, CW - 50)[0], M+4, y+6.2);
 
-    // Module stats (right-aligned)
     const statsStr = [
       stats.fail > 0  ? `${stats.fail} issue${stats.fail>1?'s':''}` : '',
       stats.warn > 0  ? `${stats.warn} manual` : '',
@@ -1768,69 +1811,107 @@ function pdfModuleView(doc, W, M, CW, startY) {
     y += 12;
 
     for (const page of pages) {
-      if (y > 258) { doc.addPage(); y = 20; }
+      if (y > PDF_BOTTOM - 8) { doc.addPage(); y = 20; }
 
-      // Page sub-header
       doc.setFillColor(248,249,251);
       doc.roundedRect(M+2, y, CW-4, 7, 1, 1, 'F');
       doc.setFont('helvetica','bold');
       doc.setFontSize(9);
       doc.setTextColor(30,30,30);
-      doc.text(`📄  ${page.pageName}`, M+5, y+4.8);
+      doc.text(doc.splitTextToSize(`Page: ${page.pageName}`, CW-10)[0], M+5, y+4.8);
       y += 9;
 
       for (const f of page.findings) {
-        if (y > 260) { doc.addPage(); y = 20; }
+        if (y > PDF_BOTTOM - 6) { doc.addPage(); y = 20; }
 
         const statusLabel = f.status === 'pass' ? 'PASS' : f.status === 'fail' ? 'FAIL' : 'MANUAL';
         const sc = f.status === 'pass' ? [22,101,52] : f.status === 'fail' ? [153,27,27] : [120,82,12];
 
-        // Check label + status pill
+        // Checkbox for non-pass findings
+        if (f.status !== 'pass') {
+          pdfCheckbox(doc, CBX, y, false);
+        }
+
         doc.setFont('helvetica','bold');
         doc.setFontSize(7.5);
         doc.setTextColor(...sc);
-        doc.text(`[${statusLabel}]`, M+5, y);
+        doc.text(`[${statusLabel}]`, TXT, y);
         doc.setFont('helvetica','normal');
         doc.setTextColor(50,50,50);
-        doc.text(f.checkLabel, M+22, y);
-        doc.setFont('helvetica','italic');
+        doc.text(doc.splitTextToSize(f.checkLabel, INNER - 22)[0], TXT+18, y);
+        doc.setFont('helvetica','normal');
         doc.setFontSize(6.5);
         doc.setTextColor(130,130,130);
-        doc.text(f.wcag, M+22, y+3.5);
-        y += 5;
+        doc.text(f.wcag, TXT, y+3.5);
+        y += 6;
 
-        // Finding title
+        if (y > PDF_BOTTOM) { doc.addPage(); y = 20; }
         doc.setFont('helvetica','normal');
         doc.setFontSize(7.5);
         doc.setTextColor(30,30,30);
-        const titleLines = doc.splitTextToSize(f.title, CW-12);
-        doc.text(titleLines, M+8, y);
-        y += titleLines.length * lineH;
+        const titleLines = doc.splitTextToSize(f.title, INNER);
+        y = pdfSafeText(doc, titleLines, TXT, y, lineH, PDF_BOTTOM);
 
-        // Individual issues
         for (const issue of (f.issues || [])) {
-          if (y > 260) { doc.addPage(); y = 20; }
-          const descLines = doc.splitTextToSize(`• ${issue.issue}`, CW-14);
-          const fixLines  = issue.fix ? doc.splitTextToSize(`  Suggestion: ${issue.fix}`, CW-14) : [];
-          const blockH = (descLines.length + fixLines.length) * lineH + (fixLines.length>0?2:0) + 4;
-          const bgColor = f.status === 'fail' ? [255,245,245] : [255,251,235];
-          doc.setFillColor(...bgColor);
-          doc.roundedRect(M+6, y-1, CW-10, blockH, 1, 1, 'F');
+          if (y > PDF_BOTTOM - 6) { doc.addPage(); y = 20; }
 
-          doc.setFont('helvetica','bold');
-          doc.setFontSize(7.5);
-          doc.setTextColor(...(f.status==='fail' ? [153,27,27] : [146,64,14]));
-          doc.text(descLines, M+8, y+2);
-          y += descLines.length * lineH + 1;
+          const isMediaRow = issue.fix === '' && issue.loc && !issue.issue.includes(' ');
+          const bgColor = isMediaRow ? [255,251,235] : f.status === 'fail' ? [255,245,245] : [255,251,235];
 
-          if (fixLines.length > 0) {
-            doc.setFont('helvetica','italic');
+          if (isMediaRow) {
+            // Media file listing row
+            const nameLines = doc.splitTextToSize(issue.issue, INNER - 4);
+            const locLine   = doc.splitTextToSize(issue.loc + '/', INNER - 4);
+            const blockH    = (nameLines.length + locLine.length) * lineH + 4;
+            if (y + blockH > PDF_BOTTOM) { doc.addPage(); y = 20; }
+            doc.setFillColor(...bgColor);
+            doc.roundedRect(TXT - 1, y - 1, INNER + 2, blockH, 1, 1, 'F');
+            // Checkbox
+            pdfCheckbox(doc, TXT, y + 1.5, false);
+            doc.setFont('helvetica','bold');
+            doc.setFontSize(7.5);
+            doc.setTextColor(30,30,30);
+            y = pdfSafeText(doc, nameLines, TXT + 5, y + 2, lineH, PDF_BOTTOM);
+            doc.setFont('helvetica','normal');
             doc.setFontSize(7);
-            doc.setTextColor(90,90,90);
-            doc.text(fixLines, M+8, y+1);
-            y += fixLines.length * lineH + 1;
+            doc.setTextColor(100,100,100);
+            y = pdfSafeText(doc, locLine, TXT + 5, y, lineH, PDF_BOTTOM);
+            y += 1;
+          } else {
+            // Standard issue row
+            const locLines  = issue.loc  ? doc.splitTextToSize(issue.loc, INNER - 4) : [];
+            const descLines = doc.splitTextToSize(issue.issue || '', INNER - 4);
+            const fixLines  = issue.fix  ? doc.splitTextToSize(`Suggestion: ${issue.fix}`, INNER - 4) : [];
+            const blockH    = (locLines.length + descLines.length + fixLines.length) * lineH + (fixLines.length > 0 ? 2 : 0) + 5;
+            if (y + blockH > PDF_BOTTOM) { doc.addPage(); y = 20; }
+            doc.setFillColor(...bgColor);
+            doc.roundedRect(TXT - 1, y - 1, INNER + 2, blockH, 1, 1, 'F');
+            // Checkbox
+            pdfCheckbox(doc, TXT, y + 1.5, false);
+            let ty = y + 2;
+            if (locLines.length > 0) {
+              // Location — normal (not italic), muted color
+              doc.setFont('helvetica','normal');
+              doc.setFontSize(7);
+              doc.setTextColor(90,90,90);
+              doc.text(locLines, TXT + 5, ty);
+              ty += locLines.length * lineH;
+            }
+            doc.setFont('helvetica','bold');
+            doc.setFontSize(7.5);
+            doc.setTextColor(30,30,30);
+            doc.text(descLines, TXT + 5, ty);
+            ty += descLines.length * lineH;
+            if (fixLines.length > 0) {
+              ty += 1;
+              doc.setFont('helvetica','normal');
+              doc.setFontSize(7);
+              doc.setTextColor(90,90,90);
+              doc.text(fixLines, TXT + 5, ty);
+              ty += fixLines.length * lineH;
+            }
+            y = ty + 2;
           }
-          y += 2;
         }
         y += 2;
       }
@@ -1840,75 +1921,117 @@ function pdfModuleView(doc, W, M, CW, startY) {
   }
 }
 
-// ── PDF: by-check view (original) ────────────────────────────────────────────
+// ── PDF: by-check view ────────────────────────────────────────────────────────
 function pdfChecksView(doc, W, M, CW, startY) {
   let y = startY;
   const lineH = 4;
+  const INNER = CW - 14; // text width inside issue block
+  const CBX   = M + 4;   // checkbox x
+  const TXT   = M + 9;   // text x after checkbox
 
   for (const sec of auditData.sections) {
-    if (y > 265) { doc.addPage(); y = 20; }
+    if (y > PDF_BOTTOM - 8) { doc.addPage(); y = 20; }
     doc.setFillColor(245,245,245);
     doc.roundedRect(M, y, CW, 7, 1, 1, 'F');
     doc.setFont('helvetica','bold');
     doc.setFontSize(10);
     doc.setTextColor(30,30,30);
-    doc.text(sec.label, M+3, y+5);
+    doc.text(doc.splitTextToSize(sec.label, CW - 4)[0], M+3, y+5);
     y += 10;
 
     for (const c of sec.checks) {
-      if (y > 265) { doc.addPage(); y = 20; }
+      if (y > PDF_BOTTOM - 6) { doc.addPage(); y = 20; }
       const statusLabel = c.status==='pass'?'PASS':c.status==='fail'?'FAIL':'MANUAL';
       const sc = c.status==='pass'?[22,101,52]:c.status==='fail'?[153,27,27]:[120,82,12];
+
+      // Checkbox for non-pass checks
+      if (c.status !== 'pass') {
+        pdfCheckbox(doc, CBX, y, false);
+      }
+
       doc.setFont('helvetica','bold');
       doc.setFontSize(8);
       doc.setTextColor(...sc);
-      doc.text(`[${statusLabel}]`, M+2, y);
+      doc.text(`[${statusLabel}]`, TXT, y);
       doc.setFont('helvetica','normal');
       doc.setTextColor(30,30,30);
-      const titleLines = doc.splitTextToSize(c.title, CW-22);
-      doc.text(titleLines, M+20, y);
+      const titleLines = doc.splitTextToSize(c.title, INNER - 22);
+      doc.text(titleLines, TXT + 18, y);
       y += titleLines.length * 4.5;
 
       if (c.detail) {
+        if (y > PDF_BOTTOM) { doc.addPage(); y = 20; }
         doc.setFontSize(7.5);
         doc.setTextColor(80,80,80);
-        const dl = doc.splitTextToSize(c.detail, CW-6);
-        doc.text(dl, M+3, y);
-        y += dl.length * lineH + 1;
+        const dl = doc.splitTextToSize(c.detail, INNER);
+        y = pdfSafeText(doc, dl, TXT, y, lineH, PDF_BOTTOM);
+        y += 1;
       }
+      if (y > PDF_BOTTOM) { doc.addPage(); y = 20; }
       doc.setFontSize(7);
       doc.setTextColor(130,130,130);
-      doc.text(c.wcag, M+3, y);
+      doc.text(c.wcag, TXT, y);
       y += 5;
 
       for (const issue of (c.issues||[])) {
-        if (y > 265) { doc.addPage(); y = 20; }
-        const locLines  = doc.splitTextToSize(issue.loc  || '', CW-10);
-        const descLines = doc.splitTextToSize(issue.issue || '', CW-10);
-        const fixLines  = issue.fix ? doc.splitTextToSize(`Suggestion: ${issue.fix}`, CW-10) : [];
-        const blockH = (locLines.length + descLines.length + fixLines.length) * lineH + (fixLines.length>0?3:0) + 6;
-        doc.setFillColor(c.status==='fail'?255:255, c.status==='fail'?240:245, c.status==='fail'?240:220);
-        doc.roundedRect(M+3, y-2, CW-6, blockH, 1, 1, 'F');
-        let ty = y + 2;
-        doc.setFont('helvetica','italic');
-        doc.setFontSize(7);
-        doc.setTextColor(c.status==='fail'?160:120, c.status==='fail'?30:70, c.status==='fail'?30:0);
-        doc.text(locLines, M+5, ty);
-        ty += locLines.length * lineH;
-        doc.setFont('helvetica','bold');
-        doc.setFontSize(7.5);
-        doc.setTextColor(c.status==='fail'?140:100, c.status==='fail'?20:60, c.status==='fail'?20:0);
-        doc.text(descLines, M+5, ty);
-        ty += descLines.length * lineH;
-        if (fixLines.length > 0) {
-          ty += 1;
-          doc.setFont('helvetica','italic');
+        if (y > PDF_BOTTOM - 6) { doc.addPage(); y = 20; }
+
+        const isMediaRow = issue.fix === '' && issue.loc && !issue.issue.includes(' ');
+        const bgFail = c.status === 'fail';
+
+        if (isMediaRow) {
+          // Media file listing
+          const nameLines = doc.splitTextToSize(issue.issue, INNER - 4);
+          const locLine   = doc.splitTextToSize(issue.loc + '/', INNER - 4);
+          const blockH    = (nameLines.length + locLine.length) * lineH + 4;
+          if (y + blockH > PDF_BOTTOM) { doc.addPage(); y = 20; }
+          doc.setFillColor(255,251,235);
+          doc.roundedRect(CBX - 1, y - 1, CW - CBX + M + 2, blockH, 1, 1, 'F');
+          pdfCheckbox(doc, CBX, y + 1.5, false);
+          doc.setFont('helvetica','bold');
+          doc.setFontSize(7.5);
+          doc.setTextColor(30,30,30);
+          y = pdfSafeText(doc, nameLines, CBX + 5, y + 2, lineH, PDF_BOTTOM);
+          doc.setFont('helvetica','normal');
           doc.setFontSize(7);
-          doc.setTextColor(90,90,90);
-          doc.text(fixLines, M+5, ty);
-          ty += fixLines.length * lineH + 1;
+          doc.setTextColor(100,100,100);
+          y = pdfSafeText(doc, locLine, CBX + 5, y, lineH, PDF_BOTTOM);
+          y += 2;
+        } else {
+          // Standard issue
+          const locLines  = issue.loc  ? doc.splitTextToSize(issue.loc, INNER - 4) : [];
+          const descLines = doc.splitTextToSize(issue.issue || '', INNER - 4);
+          const fixLines  = issue.fix  ? doc.splitTextToSize(`Suggestion: ${issue.fix}`, INNER - 4) : [];
+          const blockH    = (locLines.length + descLines.length + fixLines.length) * lineH + (fixLines.length > 0 ? 2 : 0) + 5;
+          if (y + blockH > PDF_BOTTOM) { doc.addPage(); y = 20; }
+          doc.setFillColor(bgFail ? 255 : 255, bgFail ? 245 : 251, bgFail ? 245 : 235);
+          doc.roundedRect(CBX - 1, y - 1, CW - CBX + M + 2, blockH, 1, 1, 'F');
+          // Checkbox
+          pdfCheckbox(doc, CBX, y + 1.5, false);
+          let ty = y + 2;
+          if (locLines.length > 0) {
+            // Location — normal weight, not italic, muted
+            doc.setFont('helvetica','normal');
+            doc.setFontSize(7);
+            doc.setTextColor(90,90,90);
+            doc.text(locLines, CBX + 5, ty);
+            ty += locLines.length * lineH;
+          }
+          doc.setFont('helvetica','bold');
+          doc.setFontSize(7.5);
+          doc.setTextColor(30,30,30);
+          doc.text(descLines, CBX + 5, ty);
+          ty += descLines.length * lineH;
+          if (fixLines.length > 0) {
+            ty += 1;
+            doc.setFont('helvetica','normal');
+            doc.setFontSize(7);
+            doc.setTextColor(90,90,90);
+            doc.text(fixLines, CBX + 5, ty);
+            ty += fixLines.length * lineH;
+          }
+          y = ty + 3;
         }
-        y = ty + 3;
       }
       y += 2;
     }

@@ -732,11 +732,11 @@ body{
     <!-- View toggle + filter bar -->
     <div class="view-toggle-wrap">
       <div class="view-toggle">
-        <button class="view-btn active" id="view-checks-btn" onclick="setView('checks')">
+        <button class="view-btn" id="view-checks-btn" onclick="setView('checks')">
           <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x=".75" y=".75" width="11.5" height="2.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x=".75" y="5.25" width="11.5" height="2.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x=".75" y="9.75" width="11.5" height="2.5" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
           By Check Type
         </button>
-        <button class="view-btn" id="view-modules-btn" onclick="setView('modules')">
+        <button class="view-btn active" id="view-modules-btn" onclick="setView('modules')">
           <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1 2.5h4.5v4.5H1zM7.5 2.5H12v4.5H7.5zM1 8H5.5v4.5H1zM7.5 8H12v4.5H7.5z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
           By Module
         </button>
@@ -763,7 +763,7 @@ body{
 let auditData = null;
 let fileObj = null;
 let currentFilter = 'all';
-let currentView = 'checks'; // 'checks' or 'modules'
+let currentView = 'modules'; // 'checks' or 'modules'
 
 // ─── File handling ────────────────────────────────────────────────────────────
 const dropZone = document.getElementById('drop-zone');
@@ -931,8 +931,9 @@ function inferModule(path) {
 }
 
 // ─── Link text helpers ────────────────────────────────────────────────────────
-// Returns true if the visible link text is a bare URL
+// Returns true if the visible link text is a bare URL (but not an email address)
 function looksLikeUrl(txt) {
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(txt)) return false; // email address — allowed
   return /^(https?:\/\/|www\.)\S+/i.test(txt) ||
          /^\S+\.(com|org|edu|gov|net|io)(\/\S*)?$/i.test(txt);
 }

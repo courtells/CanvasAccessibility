@@ -723,22 +723,17 @@ body{
   </div>
 
   <div id="results">
-    <div class="summary-grid">
-      <div class="summary-card"><div class="num pass-num" id="pass-count">0</div><div class="lbl">Passed</div></div>
-      <div class="summary-card"><div class="num fail-num" id="fail-count">0</div><div class="lbl">Issues found</div></div>
-      <div class="summary-card"><div class="num warn-num" id="manual-count">0</div><div class="lbl">Manual check needed</div></div>
-    </div>
 
     <!-- View toggle + filter bar -->
     <div class="view-toggle-wrap">
       <div class="view-toggle">
-        <button class="view-btn" id="view-checks-btn" onclick="setView('checks')">
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x=".75" y=".75" width="11.5" height="2.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x=".75" y="5.25" width="11.5" height="2.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x=".75" y="9.75" width="11.5" height="2.5" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
-          By Check Type
-        </button>
         <button class="view-btn active" id="view-modules-btn" onclick="setView('modules')">
           <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1 2.5h4.5v4.5H1zM7.5 2.5H12v4.5H7.5zM1 8H5.5v4.5H1zM7.5 8H12v4.5H7.5z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
           By Module
+        </button>
+        <button class="view-btn" id="view-checks-btn" onclick="setView('checks')">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x=".75" y=".75" width="11.5" height="2.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x=".75" y="5.25" width="11.5" height="2.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x=".75" y="9.75" width="11.5" height="2.5" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
+          By Check Type
         </button>
       </div>
       <div class="filter-bar" id="filter-bar">
@@ -1210,10 +1205,13 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc) {
     // ── Headings ─────────────────────────────────────────────────────────────
     const headings = doc.querySelectorAll('h1,h2,h3,h4,h5,h6');
     const pageHeadingIssues = [];
-    if (headings.length === 0 && doc.body && doc.body.textContent.trim().length > 200) {
-      const issue = { loc, issue: 'Long content page has no heading structure', fix: 'Use HTML headings (H1–H3) to organize content into logical sections.' };
-      missingHeadings.push(issue);
-      pageHeadingIssues.push({ issue: issue.issue, fix: issue.fix });
+    if (headings.length === 0 && doc.body) {
+      const wordCount = doc.body.textContent.trim().split(/\s+/).filter(Boolean).length;
+      if (wordCount >= 250) {
+        const issue = { loc, issue: 'Long content page has no heading structure', fix: 'Use HTML headings (H1–H3) to organize content into logical sections.' };
+        missingHeadings.push(issue);
+        pageHeadingIssues.push({ issue: issue.issue, fix: issue.fix });
+      }
     }
     let prevLevel = 0;
     headings.forEach(h => {
@@ -1420,10 +1418,6 @@ function filterResults(f, btn) {
 function renderResults() {
   document.getElementById('upload-area').style.display = 'none';
   document.getElementById('results').style.display = 'block';
-  const {pass,fail,warn} = countByStatus(auditData);
-  document.getElementById('pass-count').textContent = pass;
-  document.getElementById('fail-count').textContent = fail;
-  document.getElementById('manual-count').textContent = warn;
 
   if (currentView === 'modules') {
     renderModuleView();
@@ -1707,26 +1701,6 @@ function downloadPDF() {
   const viewLabel = currentView === 'modules' ? 'Organised by Module' : 'Organised by Check Type';
   doc.text(`File: ${fileObj ? fileObj.name : 'Unknown'} | Generated: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})} | View: ${viewLabel}`, M, y); y += 5;
   doc.text('WCAG 2.1 AA Standard', M, y); y += 10;
-
-  const {pass,fail,warn} = countByStatus(auditData);
-  const bw=52, bh=14, bx=[M,M+bw+4,M+(bw+4)*2];
-  const sumData = [`${pass} passed`, `${fail} issues`, `${warn} manual checks needed`];
-  const sumColors = [{r:22,g:101,b:52},{r:153,g:27,b:27},{r:120,g:82,b:12}];
-  bx.forEach((x,i) => {
-    const parts = sumData[i].split(' ');
-    const num = parts[0], label = parts.slice(1).join(' ');
-    doc.setFillColor(240,240,240);
-    doc.roundedRect(x,y,bw,bh,2,2,'F');
-    doc.setFont('helvetica','bold');
-    doc.setFontSize(13);
-    doc.setTextColor(sumColors[i].r, sumColors[i].g, sumColors[i].b);
-    doc.text(num, x+bw/2, y+6, {align:'center'});
-    doc.setFont('helvetica','normal');
-    doc.setFontSize(8);
-    doc.setTextColor(80,80,80);
-    doc.text(label, x+bw/2, y+11, {align:'center'});
-  });
-  y += 22;
 
   if (currentView === 'modules') {
     pdfModuleView(doc, W, M, CW, y);

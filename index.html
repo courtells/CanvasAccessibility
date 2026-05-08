@@ -782,11 +782,16 @@ let currentFilter = 'all';
 let currentView = 'modules'; // 'checks' or 'modules'
 
 // Derive a Canvas page URL from the exported file path and the user-supplied base URL.
-// Canvas page slugs match the HTML filename (without extension) from the export.
-function pageUrl(path) {
+// HTML pages use /pages/slug; discussion XML files use /discussion_topics/ (no reliable
+// slug in export so we link to the discussion index and note the title).
+function pageUrl(path, type) {
   if (!canvasBaseUrl) return '';
   try {
-    const base = canvasBaseUrl.replace(/\/+$/, '').replace(/\/pages.*$/, '');
+    const base = canvasBaseUrl.replace(/\/+$/, '').replace(/\/pages.*$/, '').replace(/\/discussion_topics.*$/, '');
+    if (type === 'discussion') {
+      // Canvas discussion slugs aren't in the export — link to the discussions index
+      return `${base}/discussion_topics`;
+    }
     const parts = path.split('/');
     const slug  = parts[parts.length - 1].replace(/\.html?$/i, '');
     return `${base}/pages/${encodeURIComponent(slug)}`;
@@ -859,7 +864,7 @@ async function runAudit() {
     const parser = new DOMParser();
     const xmlDoc = manifest ? parser.parseFromString(manifest, 'text/xml') : null;
 
-    const { pageMap } = parseManifest(xmlDoc);
+    const { pageMap, moduleOrder, pageOrder } = parseManifest(xmlDoc);
     const pages = await extractPages(zip, pageMap);
     setProgress(45, 'Scanning HTML content for accessibility issues...');
     await sleep(300);
@@ -869,7 +874,7 @@ async function runAudit() {
     setProgress(60, 'Checking color contrast ratios...');
     await sleep(300);
 
-    auditData = await performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc);
+    auditData = await performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOrder, pageOrder);
     setProgress(90, 'Generating report...');
     await sleep(300);
 
@@ -893,18 +898,32 @@ async function getFile(zip, name) {
 
 // ─── Manifest parsing ─────────────────────────────────────────────────────────
 function parseManifest(xmlDoc) {
-  const empty = { pageMap: {}, hasManifest: false };
+  const empty = { pageMap: {}, moduleOrder: [], pageOrder: {}, hasManifest: false };
   if (!xmlDoc) return empty;
   if (xmlDoc.querySelector('parsererror')) return empty;
 
   const resourceHrefs = {};
+  const resourceTypes = {};
   xmlDoc.querySelectorAll('resource').forEach(r => {
     const id   = r.getAttribute('identifier');
-    const href = r.getAttribute('href');
-    if (id && href) resourceHrefs[id] = href;
+    const type = r.getAttribute('type') || '';
+    // imsdt (discussion) resources have no href attribute — the path is in the
+    // child <file href="..."> element instead
+    let href = r.getAttribute('href');
+    if (!href && type.includes('imsdt')) {
+      const fileEl = Array.from(r.children).find(c => c.tagName === 'file');
+      if (fileEl) href = fileEl.getAttribute('href');
+    }
+    if (id && href) {
+      resourceHrefs[id] = href;
+      resourceTypes[id] = type;
+    }
   });
 
-  const pageMap = {};
+  const pageMap     = {};  // path → { moduleName, pageTitle }
+  const moduleOrder = [];  // ordered list of module names as they appear in manifest
+  const pageOrder   = {};  // moduleName → ordered list of page paths
+
   const orgRoot = xmlDoc.querySelector('organization > item');
   if (orgRoot) {
     Array.from(orgRoot.children)
@@ -912,6 +931,10 @@ function parseManifest(xmlDoc) {
       .forEach(moduleItem => {
         const moduleTitleEl = Array.from(moduleItem.children).find(el => el.tagName === 'title');
         const moduleName = moduleTitleEl ? moduleTitleEl.textContent.trim() : 'Unnamed Module';
+        if (!moduleOrder.includes(moduleName)) {
+          moduleOrder.push(moduleName);
+          pageOrder[moduleName] = [];
+        }
         Array.from(moduleItem.children)
           .filter(el => el.tagName === 'item')
           .forEach(pageItem => {
@@ -919,24 +942,32 @@ function parseManifest(xmlDoc) {
             const pageTitleEl = Array.from(pageItem.children).find(el => el.tagName === 'title');
             const pageTitle = pageTitleEl ? pageTitleEl.textContent.trim() : '';
             if (ref && resourceHrefs[ref]) {
-              pageMap[resourceHrefs[ref]] = { moduleName, pageTitle };
+              const path = resourceHrefs[ref];
+              const isDiscussion = (resourceTypes[ref] || '').includes('imsdt');
+              pageMap[path] = { moduleName, pageTitle, isDiscussion };
+              pageOrder[moduleName].push(path);
             }
           });
       });
   }
 
-  return { pageMap, hasManifest: true };
+  return { pageMap, moduleOrder, pageOrder, hasManifest: true };
 }
 
 async function extractPages(zip, pageMap) {
   const pages = [];
-  const htmlFiles = Object.keys(zip.files).filter(k => /\.html?$/i.test(k));
   const map = pageMap || {};
   const manifestPresent = Object.keys(map).length > 0;
+  const xmlParser = new DOMParser();
 
+  // ── HTML pages ──────────────────────────────────────────────────────────────
+  const htmlFiles = Object.keys(zip.files).filter(k => /\.html?$/i.test(k));
   for (const key of htmlFiles) {
     try {
-      const content = await zip.files[key].async('string');
+      const rawContent = await zip.files[key].async('string');
+      // Resolve Canvas's IMS-CC-FILEBASE$ placeholder so image src attributes
+      // point to recognisable paths instead of the token
+      const content = rawContent.replace(/\$IMS-CC-FILEBASE\$/g, 'web_resources');
       const parts = key.split('/');
       const fileName = parts[parts.length - 1].replace(/\.html?$/i, '');
       const entry = map[key];
@@ -947,10 +978,55 @@ async function extractPages(zip, pageMap) {
         module: entry
           ? entry.moduleName
           : (manifestPresent ? 'Not attached to a module' : inferModule(key)),
-        inManifest: !!entry
+        inManifest: !!entry,
+        type: 'page'
       });
     } catch(e) {}
   }
+
+  // ── Discussion topics (imsdt XML files) ────────────────────────────────────
+  // These are XML files whose path appears in pageMap with isDiscussion: true
+  const discussionEntries = Object.entries(map).filter(([, v]) => v.isDiscussion);
+  for (const [path, entry] of discussionEntries) {
+    try {
+      const zipFile = zip.files[path] ||
+                      Object.values(zip.files).find(f => f.name === path || f.name.endsWith('/' + path));
+      if (!zipFile) continue;
+      const rawXml = await zipFile.async('string');
+      const xmlDoc = xmlParser.parseFromString(rawXml, 'text/xml');
+      if (xmlDoc.querySelector('parsererror')) continue;
+
+      // The discussion body is HTML stored as encoded text inside <text texttype="text/html">
+      const textEl = xmlDoc.querySelector('text');
+      if (!textEl) continue;
+      const encodedHtml = textEl.textContent || '';
+      if (!encodedHtml.trim()) {
+        // Empty discussion — still add it so it shows in module view
+        pages.push({
+          path,
+          name:   entry.pageTitle || path.split('/').pop().replace(/\.xml$/i, ''),
+          content: '<html><head><title>' + (entry.pageTitle || '') + '</title></head><body></body></html>',
+          module: entry.moduleName,
+          inManifest: true,
+          type: 'discussion'
+        });
+        continue;
+      }
+
+      // Wrap in a full HTML document so the existing audit pipeline can parse it normally
+      const resolvedHtml = encodedHtml.replace(/\$IMS-CC-FILEBASE\$/g, 'web_resources');
+      const content = `<html><head><title>${entry.pageTitle || ''}</title></head><body>${resolvedHtml}</body></html>`;
+      pages.push({
+        path,
+        name:   entry.pageTitle || path.split('/').pop().replace(/\.xml$/i, ''),
+        content,
+        module: entry.moduleName,
+        inManifest: true,
+        type: 'discussion'
+      });
+    } catch(e) {}
+  }
+
   return pages;
 }
 
@@ -1113,9 +1189,9 @@ function checkPageContrast(doc, loc, url) {
 // ─── Main audit ───────────────────────────────────────────────────────────────
 const UNATTACHED_KEY = '__unattached__';
 
-async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc) {
+async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOrder = [], pageOrder = {}) {
   const parser = new DOMParser();
-  const results = { sections: [], byModule: {} };
+  const results = { sections: [], byModule: {}, moduleOrder, pageOrder };
 
   let totalImages = 0, missingAlt = [], imagesOfText = [];
   let totalLinks = 0, badLinks = [];
@@ -1131,13 +1207,31 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc) {
   for (const page of pages) {
     const doc = parser.parseFromString(page.content, 'text/html');
     const loc  = `${page.module} → ${page.name}`;
-    const pUrl = pageUrl(page.path); // live Canvas URL for this page (may be empty)
+    const pUrl = pageUrl(page.path, page.type); // live Canvas URL for this page (may be empty)
     const moduleName = page.inManifest ? page.module : UNATTACHED_KEY;
 
     if (!pageFindings[page.path]) {
-      pageFindings[page.path] = { moduleName, pageName: page.name, pageUrl: pageUrl(page.path), findings: [] };
+      pageFindings[page.path] = { moduleName, pageName: page.name, pagePath: page.path, pageType: page.type || 'page', pageUrl: pageUrl(page.path, page.type), findings: [] };
     }
     const pf = pageFindings[page.path];
+
+    // ── Empty / LTI page detection ────────────────────────────────────────────
+    // Canvas exports pages that use external tools (LTI) or are otherwise empty
+    // as blank HTML bodies. Flag them so users know they need manual review.
+    const bodyText = (doc.body && doc.body.textContent.trim()) || '';
+    const hasAnyContent = bodyText.length > 0 ||
+                          doc.querySelectorAll('img,video,audio,iframe,table,a').length > 0;
+    if (!hasAnyContent) {
+      pf.findings.push({
+        checkLabel: 'Page content',
+        wcag: 'Manual check',
+        status: 'warn',
+        title: 'Page body is empty in this export',
+        issues: [{ issue: 'This page has no auditable HTML content. It likely uses an external tool (LTI), embedded media, or content that Canvas does not include in course exports.', fix: 'Review this page directly in Canvas to check for accessibility issues.' }]
+      });
+      // Skip remaining checks — nothing to audit
+      continue;
+    }
 
     // ── Page titles ──────────────────────────────────────────────────────────
     const title = doc.querySelector('title');
@@ -1154,25 +1248,49 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc) {
     });
 
     // ── Images ───────────────────────────────────────────────────────────────
+    // Canvas exports can embed images as plain <img>, or inside <p>/<figure> wrappers.
+    // Some use data-src or data-lazy-src instead of src.
     const imgs = doc.querySelectorAll('img');
     totalImages += imgs.length;
     const pageAltIssues = [];
+
+    // Returns true if a string looks like a filename rather than a human description
+    const looksLikeFilename = (s) => {
+      const t = s.trim();
+      // Has any image file extension anywhere in the string
+      if (/\.(png|jpe?g|gif|svg|webp|bmp|tiff?|heic|avif)(\s|$)/i.test(t)) return true;
+      // Entire string ends with an image extension
+      if (/\.(png|jpe?g|gif|svg|webp|bmp|tiff?|heic|avif)$/i.test(t)) return true;
+      // Screen-shot / generic placeholder names
+      if (/^(screen.?shot|screenshot|capture|image\d*|img\d*|photo\d*|picture\d*|untitled|unnamed|file\d*)[\s_\-\d\.]*$/i.test(t)) return true;
+      // No spaces and contains underscores or hyphens with digits — machine-generated slug
+      if (!/\s/.test(t) && t.length > 4 && /[_\-]/.test(t) && /\d/.test(t)) return true;
+      return false;
+    };
+
     imgs.forEach(img => {
-      const alt = img.getAttribute('alt');
-      const src = img.getAttribute('src') || '';
+      const altRaw = img.getAttribute('alt') ?? img.getAttribute('data-alt');
+      const alt    = altRaw !== null ? altRaw.trim() : null;
+      const src    = img.getAttribute('src') || img.getAttribute('data-src') || img.getAttribute('data-lazy-src') || '';
+      const srcName = src.split('/').pop().split('?')[0]; // filename only, strip query params
+
       if (alt === null) {
-        const issue = { loc, url: pUrl, issue: `Image missing alt attribute (src: ${src.split('/').pop() || 'unknown'})`, fix: 'Add descriptive alt text to the image, or alt="" if purely decorative.' };
+        const issue = { loc, url: pUrl, issue: `Image missing alt attribute (src: ${srcName || 'unknown'})`, fix: 'Add descriptive alt text to the image, or alt="" if purely decorative.' };
         missingAlt.push(issue);
         pageAltIssues.push({ issue: issue.issue, fix: issue.fix });
-      } else if (alt.length > 0 && /\.(png|jpg|jpeg|gif|svg)/i.test(alt)) {
-        const issue = { loc, url: pUrl, issue: `Alt text appears to be a filename: "${alt.substring(0,40)}"`, fix: 'Replace filename with a meaningful description of the image content.' };
+      } else if (alt.length > 0 && looksLikeFilename(alt)) {
+        const issue = { loc, url: pUrl, issue: `Alt text appears to be a filename: "${alt.substring(0, 60)}"`, fix: 'Replace with a meaningful description of the image content.' };
         missingAlt.push(issue);
         pageAltIssues.push({ issue: issue.issue, fix: issue.fix });
       }
-      if (/text|screenshot|slide/i.test(src) && (!alt || alt.length < 10)) {
-        const issue = { loc, url: pUrl, issue: `Possible image of text detected (src: ${src.split('/').pop()})`, fix: 'Replace images of text with actual HTML text, or provide full text content in alt attribute.' };
-        imagesOfText.push(issue);
-        pageAltIssues.push({ issue: issue.issue, fix: issue.fix });
+      if (/text|screenshot|slide/i.test(srcName) && (!alt || alt.length < 10)) {
+        // Only add if we haven't already flagged this image for a bad alt
+        const alreadyFlagged = pageAltIssues.some(x => x.issue.includes(srcName));
+        if (!alreadyFlagged) {
+          const issue = { loc, url: pUrl, issue: `Possible image of text detected (src: ${srcName})`, fix: 'Replace images of text with actual HTML text, or provide full text content in alt attribute.' };
+          imagesOfText.push(issue);
+          pageAltIssues.push({ issue: issue.issue, fix: issue.fix });
+        }
       }
     });
     if (imgs.length > 0) {
@@ -1183,6 +1301,34 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc) {
         title: pageAltIssues.length > 0 ? `${pageAltIssues.length} alt text issue(s) on ${imgs.length} image(s)` : `All ${imgs.length} image(s) have alt attributes`,
         issues: pageAltIssues
       });
+    } else {
+      // Fallback: scan the raw HTML string for <img tags in case the DOM parser
+      // sandboxing dropped them (can happen with certain XHTML or malformed markup)
+      const rawImgMatches = [...page.content.matchAll(/<img\b[^>]*>/gi)];
+      if (rawImgMatches.length > 0) {
+        totalImages += rawImgMatches.length;
+        const rawIssues = [];
+        rawImgMatches.forEach(([tag]) => {
+          const altMatch = tag.match(/\balt\s*=\s*["']([^"']*)["']/i);
+          const srcMatch = tag.match(/\bsrc\s*=\s*["']([^"']*)["']/i);
+          const srcName  = srcMatch ? srcMatch[1].split('/').pop().split('?')[0] : 'unknown';
+          if (!altMatch) {
+            rawIssues.push({ issue: `Image missing alt attribute (src: ${srcName})`, fix: 'Add descriptive alt text to the image, or alt="" if purely decorative.' });
+          } else if (altMatch[1].length > 0 && looksLikeFilename(altMatch[1].trim())) {
+            rawIssues.push({ issue: `Alt text appears to be a filename: "${altMatch[1].substring(0, 60)}"`, fix: 'Replace with a meaningful description of the image content.' });
+          }
+        });
+        if (rawIssues.length > 0) {
+          rawIssues.forEach(i => missingAlt.push({ loc, url: pUrl, ...i }));
+        }
+        pf.findings.push({
+          checkLabel: 'Image alt text',
+          wcag: 'WCAG 1.1.1 / 1.4.5 Level A/AA',
+          status: rawIssues.length > 0 ? 'fail' : 'pass',
+          title: rawIssues.length > 0 ? `${rawIssues.length} alt text issue(s) on ${rawImgMatches.length} image(s)` : `All ${rawImgMatches.length} image(s) have alt attributes`,
+          issues: rawIssues
+        });
+      }
     }
 
     // ── Links — flag generic text AND raw URLs ────────────────────────────────
@@ -1292,7 +1438,7 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc) {
   for (const [path, pf] of Object.entries(pageFindings)) {
     const key = pf.moduleName;
     if (!results.byModule[key]) results.byModule[key] = [];
-    results.byModule[key].push({ pageName: pf.pageName, pageUrl: pf.pageUrl, findings: pf.findings });
+    results.byModule[key].push({ pageName: pf.pageName, pagePath: pf.pagePath, pageType: pf.pageType, pageUrl: pf.pageUrl, findings: pf.findings });
   }
 
   const videoFiles = mediaFiles.filter(f => /\.(mp4|mov|avi|webm)$/i.test(f));
@@ -1567,11 +1713,34 @@ function toggleSection(id) {
 }
 
 // ─── Module view ──────────────────────────────────────────────────────────────
+// Sort module keys using the manifest order, with UNATTACHED_KEY always last.
+// Falls back to alphabetical for any module not found in the manifest order.
 function sortedModuleKeys(byModule) {
-  return Object.keys(byModule).sort((a, b) => {
+  const manifestOrder = (auditData && auditData.moduleOrder) || [];
+  const keys = Object.keys(byModule);
+  return keys.sort((a, b) => {
     if (a === UNATTACHED_KEY) return 1;
     if (b === UNATTACHED_KEY) return -1;
-    return a.localeCompare(b);
+    const ai = manifestOrder.indexOf(a);
+    const bi = manifestOrder.indexOf(b);
+    if (ai === -1 && bi === -1) return a.localeCompare(b);
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
+  });
+}
+
+// Sort pages within a module using the manifest page order.
+function sortedModulePages(moduleName, pages) {
+  const order = (auditData && auditData.pageOrder && auditData.pageOrder[moduleName]) || [];
+  if (order.length === 0) return pages;
+  return [...pages].sort((a, b) => {
+    const aIdx = order.indexOf(a.pagePath);
+    const bIdx = order.indexOf(b.pagePath);
+    if (aIdx === -1 && bIdx === -1) return 0;
+    if (aIdx === -1) return 1;
+    if (bIdx === -1) return -1;
+    return aIdx - bIdx;
   });
 }
 
@@ -1598,7 +1767,7 @@ function renderModuleView() {
   }
 
   keys.forEach((key, mi) => {
-    const pages = auditData.byModule[key];
+    const pages = sortedModulePages(key, auditData.byModule[key]);
     const isUnattached = key === UNATTACHED_KEY;
     const displayName = isUnattached ? 'Not attached to a module' : key;
     const stats = moduleStats(pages);
@@ -1656,8 +1825,13 @@ function renderPageBlock(page, pid) {
 
   const findingsHtml = page.findings.map(f => renderFinding(f)).join('');
 
+  const typeTag = page.pageType === 'discussion'
+    ? `<span style="font-size:10px;font-weight:600;color:#7c3aed;background:#ede9fe;border:1px solid rgba(124,58,237,.2);border-radius:4px;padding:1px 6px;letter-spacing:.02em;flex-shrink:0">Discussion</span>`
+    : '';
+
   const linkHtml = page.pageUrl
-    ? `<a href="${escHtml(page.pageUrl)}" target="_blank" rel="noopener" title="Open page in Canvas"
+    ? `<a href="${escHtml(page.pageUrl)}" target="_blank" rel="noopener"
+          title="${page.pageType === 'discussion' ? 'Open discussions in Canvas' : 'Open page in Canvas'}"
           onclick="event.stopPropagation()"
           style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;color:var(--c-accent);text-decoration:none;padding:2px 8px;border-radius:var(--r-sm);border:1px solid rgba(37,99,235,.25);background:var(--c-accent-bg);flex-shrink:0;transition:background .15s"
           onmouseover="this.style.background='rgba(37,99,235,.18)'"
@@ -1669,7 +1843,7 @@ function renderPageBlock(page, pid) {
 
   return `<div class="page-block">
     <div class="page-hdr" onclick="togglePage('${pid}')">
-      <h4>${smallIcon} ${escHtml(page.pageName)} ${linkHtml}</h4>
+      <h4>${smallIcon} ${escHtml(page.pageName)} ${typeTag} ${linkHtml}</h4>
       <div style="display:flex;align-items:center;gap:6px">
         <div class="badges">${badgesHtml}</div>
         <span class="chevron" id="chev-${pid}" style="font-size:9px">▼</span>
@@ -1814,7 +1988,7 @@ function pdfModuleView(doc, W, M, CW, startY) {
   const keys = sortedModuleKeys(auditData.byModule);
 
   for (const key of keys) {
-    const pages = auditData.byModule[key];
+    const pages = sortedModulePages(key, auditData.byModule[key]);
     const isUnattached = key === UNATTACHED_KEY;
     const displayName = isUnattached ? 'Not attached to a module' : key;
     const stats = moduleStats(pages);
@@ -1844,12 +2018,13 @@ function pdfModuleView(doc, W, M, CW, startY) {
     for (const page of pages) {
       if (y > PDF_BOTTOM - 8) { doc.addPage(); y = 20; }
 
+      const pageTypeLabel = page.pageType === 'discussion' ? 'Discussion: ' : 'Page: ';
       doc.setFillColor(248,249,251);
       doc.roundedRect(M+2, y, CW-4, 7, 1, 1, 'F');
       doc.setFont('helvetica','bold');
       doc.setFontSize(9);
       doc.setTextColor(30,30,30);
-      doc.text(doc.splitTextToSize(`Page: ${page.pageName}`, CW-10)[0], M+5, y+4.8);
+      doc.text(doc.splitTextToSize(`${pageTypeLabel}${page.pageName}`, CW-10)[0], M+5, y+4.8);
       if (page.pageUrl) {
         doc.setFont('helvetica','normal');
         doc.setFontSize(6.5);

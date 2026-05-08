@@ -707,6 +707,26 @@ body{
           </svg>
         </button>
       </div>
+      <div style="margin-top:1rem">
+        <label for="canvas-url-input" style="display:block;font-size:12.5px;font-weight:500;color:var(--c-ink-soft);margin-bottom:6px">
+          Canvas course URL
+          <span style="font-weight:400;color:var(--c-ink-ghost);margin-left:4px">— optional, enables direct page links in the report</span>
+        </label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="position:relative;flex:1">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);pointer-events:none;flex-shrink:0"><path d="M7 1a6 6 0 100 12A6 6 0 007 1zM1 7h12M7 1a9.5 9.5 0 010 12M7 1a9.5 9.5 0 000 12" stroke="var(--c-ink-ghost)" stroke-width="1.2" stroke-linecap="round"/></svg>
+            <input
+              id="canvas-url-input"
+              type="url"
+              placeholder="https://canvas.instructure.com/courses/123456"
+              style="width:100%;padding:8px 10px 8px 30px;border:1px solid var(--c-border-strong);border-radius:var(--r-md);font-family:var(--font-body);font-size:13px;color:var(--c-ink);background:white;box-shadow:var(--shadow-xs);outline:none;transition:border-color .15s,box-shadow .15s"
+              onfocus="this.style.borderColor='var(--c-accent)';this.style.boxShadow='0 0 0 3px rgba(37,99,235,.1)'"
+              onblur="this.style.borderColor='';this.style.boxShadow='var(--shadow-xs)'"
+            >
+          </div>
+        </div>
+        <p style="font-size:11.5px;color:var(--c-ink-ghost);margin-top:5px">Paste the URL from your browser while viewing any page in this course.</p>
+      </div>
       <div style="display:flex;gap:8px;margin-top:1rem">
         <button class="btn primary" id="run-btn" onclick="runAudit()">Run accessibility audit</button>
       </div>
@@ -757,8 +777,21 @@ body{
 <script>
 let auditData = null;
 let fileObj = null;
+let canvasBaseUrl = ''; // optional Canvas course URL for direct page links
 let currentFilter = 'all';
 let currentView = 'modules'; // 'checks' or 'modules'
+
+// Derive a Canvas page URL from the exported file path and the user-supplied base URL.
+// Canvas page slugs match the HTML filename (without extension) from the export.
+function pageUrl(path) {
+  if (!canvasBaseUrl) return '';
+  try {
+    const base = canvasBaseUrl.replace(/\/+$/, '').replace(/\/pages.*$/, '');
+    const parts = path.split('/');
+    const slug  = parts[parts.length - 1].replace(/\.html?$/i, '');
+    return `${base}/pages/${encodeURIComponent(slug)}`;
+  } catch(e) { return ''; }
+}
 
 // ─── File handling ────────────────────────────────────────────────────────────
 const dropZone = document.getElementById('drop-zone');
@@ -781,12 +814,13 @@ function handleFile(f) {
 }
 
 function resetTool() {
-  fileObj = null; auditData = null;
+  fileObj = null; auditData = null; canvasBaseUrl = '';
   document.getElementById('upload-area').style.display = 'block';
   document.getElementById('results').style.display = 'none';
   document.getElementById('file-preview').style.display = 'none';
   document.getElementById('progress-area').style.display = 'none';
   document.getElementById('run-btn').disabled = false;
+  document.getElementById('canvas-url-input').value = '';
   fileInput.value = '';
 }
 
@@ -807,6 +841,7 @@ function setView(v) {
 // ─── Audit runner ─────────────────────────────────────────────────────────────
 async function runAudit() {
   if (!fileObj) return;
+  canvasBaseUrl = (document.getElementById('canvas-url-input').value || '').trim();
   document.getElementById('run-btn').disabled = true;
   document.getElementById('file-preview').querySelector('.btn').disabled = true;
   document.getElementById('progress-area').style.display = 'block';
@@ -1039,7 +1074,7 @@ function resolveBackground(el) {
   return { r: 255, g: 255, b: 255 };
 }
 
-function checkPageContrast(doc, loc) {
+function checkPageContrast(doc, loc, url) {
   const issues = [];
   const TEXT_TAGS = 'p,span,div,td,th,li,h1,h2,h3,h4,h5,h6,a,strong,em,b,i,label,caption,blockquote,pre,code,small,mark,s,del,ins';
   const elements = doc.querySelectorAll(TEXT_TAGS);
@@ -1061,6 +1096,7 @@ function checkPageContrast(doc, loc) {
     if (ratio < threshold) {
       issues.push({
         loc,
+        url,
         issue: `Contrast ratio ${ratio.toFixed(2)}:1 — below ${threshold}:1 required for ${label}. Foreground: ${toHex(fg)}, Background: ${toHex(bg)}.`,
         fix: `Adjust the text color or background so the contrast ratio is at least ${threshold}:1. Current: ${toHex(fg)} on ${toHex(bg)} (ratio ${ratio.toFixed(2)}:1). Try a darker text or lighter background.`,
         fgHex: toHex(fg),
@@ -1094,11 +1130,12 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc) {
 
   for (const page of pages) {
     const doc = parser.parseFromString(page.content, 'text/html');
-    const loc = `${page.module} → ${page.name}`;
+    const loc  = `${page.module} → ${page.name}`;
+    const pUrl = pageUrl(page.path); // live Canvas URL for this page (may be empty)
     const moduleName = page.inManifest ? page.module : UNATTACHED_KEY;
 
     if (!pageFindings[page.path]) {
-      pageFindings[page.path] = { moduleName, pageName: page.name, findings: [] };
+      pageFindings[page.path] = { moduleName, pageName: page.name, pageUrl: pageUrl(page.path), findings: [] };
     }
     const pf = pageFindings[page.path];
 
@@ -1106,7 +1143,7 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc) {
     const title = doc.querySelector('title');
     const titleMissing = !title || !title.textContent.trim() || title.textContent.trim().toLowerCase() === 'untitled';
     if (titleMissing) {
-      missingTitles.push({ loc, issue: 'Page has no descriptive title tag', fix: 'Add a unique, descriptive <title> that reflects the page content.' });
+      missingTitles.push({ loc, url: pUrl, issue: 'Page has no descriptive title tag', fix: 'Add a unique, descriptive <title> that reflects the page content.' });
     }
     pf.findings.push({
       checkLabel: 'Page title',
@@ -1124,16 +1161,16 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc) {
       const alt = img.getAttribute('alt');
       const src = img.getAttribute('src') || '';
       if (alt === null) {
-        const issue = { loc, issue: `Image missing alt attribute (src: ${src.split('/').pop() || 'unknown'})`, fix: 'Add descriptive alt text to the image, or alt="" if purely decorative.' };
+        const issue = { loc, url: pUrl, issue: `Image missing alt attribute (src: ${src.split('/').pop() || 'unknown'})`, fix: 'Add descriptive alt text to the image, or alt="" if purely decorative.' };
         missingAlt.push(issue);
         pageAltIssues.push({ issue: issue.issue, fix: issue.fix });
       } else if (alt.length > 0 && /\.(png|jpg|jpeg|gif|svg)/i.test(alt)) {
-        const issue = { loc, issue: `Alt text appears to be a filename: "${alt.substring(0,40)}"`, fix: 'Replace filename with a meaningful description of the image content.' };
+        const issue = { loc, url: pUrl, issue: `Alt text appears to be a filename: "${alt.substring(0,40)}"`, fix: 'Replace filename with a meaningful description of the image content.' };
         missingAlt.push(issue);
         pageAltIssues.push({ issue: issue.issue, fix: issue.fix });
       }
       if (/text|screenshot|slide/i.test(src) && (!alt || alt.length < 10)) {
-        const issue = { loc, issue: `Possible image of text detected (src: ${src.split('/').pop()})`, fix: 'Replace images of text with actual HTML text, or provide full text content in alt attribute.' };
+        const issue = { loc, url: pUrl, issue: `Possible image of text detected (src: ${src.split('/').pop()})`, fix: 'Replace images of text with actual HTML text, or provide full text content in alt attribute.' };
         imagesOfText.push(issue);
         pageAltIssues.push({ issue: issue.issue, fix: issue.fix });
       }
@@ -1157,11 +1194,11 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc) {
       const aria = a.getAttribute('aria-label') || '';
       if (aria) return; // aria-label present — skip
       if (!txt || /^(click here|here|link|read more|more|this|download)$/i.test(txt)) {
-        const issue = { loc, issue: `Non-descriptive link text: "${txt || '(empty)'}"`, fix: 'Use meaningful link text that describes the destination (e.g., "Download the course syllabus PDF").' };
+        const issue = { loc, url: pUrl, issue: `Non-descriptive link text: "${txt || '(empty)'}"`, fix: 'Use meaningful link text that describes the destination (e.g., "Download the course syllabus PDF").' };
         badLinks.push(issue);
         pageLinkIssues.push({ issue: issue.issue, fix: issue.fix });
       } else if (looksLikeUrl(txt)) {
-        const issue = { loc, issue: `Link text is a raw URL: "${txt.length > 60 ? txt.substring(0,60)+'…' : txt}"`, fix: 'Replace the URL with a descriptive label (e.g., "Course syllabus" instead of the full URL).' };
+        const issue = { loc, url: pUrl, issue: `Link text is a raw URL: "${txt.length > 60 ? txt.substring(0,60)+'…' : txt}"`, fix: 'Replace the URL with a descriptive label (e.g., "Course syllabus" instead of the full URL).' };
         badLinks.push(issue);
         pageLinkIssues.push({ issue: issue.issue, fix: issue.fix });
       }
@@ -1183,11 +1220,11 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc) {
       const headers = tbl.querySelectorAll('th');
       const scope = Array.from(headers).some(h => h.getAttribute('scope'));
       if (!headers.length) {
-        const issue = { loc, issue: 'Data table found with no <th> header cells', fix: 'Mark header row cells as <th> elements with appropriate scope="col" or scope="row" attributes.' };
+        const issue = { loc, url: pUrl, issue: 'Data table found with no <th> header cells', fix: 'Mark header row cells as <th> elements with appropriate scope="col" or scope="row" attributes.' };
         tableIssues.push(issue);
         pageTableIssues.push({ issue: issue.issue, fix: issue.fix });
       } else if (!scope) {
-        const issue = { loc, issue: 'Table has <th> headers but no scope attribute', fix: 'Add scope="col" or scope="row" to all <th> elements to clarify header direction.' };
+        const issue = { loc, url: pUrl, issue: 'Table has <th> headers but no scope attribute', fix: 'Add scope="col" or scope="row" to all <th> elements to clarify header direction.' };
         tableIssues.push(issue);
         pageTableIssues.push({ issue: issue.issue, fix: issue.fix });
       }
@@ -1208,7 +1245,7 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc) {
     if (headings.length === 0 && doc.body) {
       const wordCount = doc.body.textContent.trim().split(/\s+/).filter(Boolean).length;
       if (wordCount >= 250) {
-        const issue = { loc, issue: 'Long content page has no heading structure', fix: 'Use HTML headings (H1–H3) to organize content into logical sections.' };
+        const issue = { loc, url: pUrl, issue: 'Long content page has no heading structure', fix: 'Use HTML headings (H1–H3) to organize content into logical sections.' };
         missingHeadings.push(issue);
         pageHeadingIssues.push({ issue: issue.issue, fix: issue.fix });
       }
@@ -1217,7 +1254,7 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc) {
     headings.forEach(h => {
       const level = parseInt(h.tagName[1]);
       if (level > prevLevel + 1 && prevLevel > 0) {
-        const issue = { loc, issue: `Heading level skipped: H${prevLevel} → H${level} ("${h.textContent.trim().substring(0,40)}")`, fix: `Don't skip heading levels. Use H${prevLevel+1} instead of H${level}.` };
+        const issue = { loc, url: pUrl, issue: `Heading level skipped: H${prevLevel} → H${level} ("${h.textContent.trim().substring(0,40)}")`, fix: `Don't skip heading levels. Use H${prevLevel+1} instead of H${level}.` };
         missingHeadings.push(issue);
         pageHeadingIssues.push({ issue: issue.issue, fix: issue.fix });
       }
@@ -1236,7 +1273,7 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc) {
     contrastInspectedElements += styledEls.length;
     if (styledEls.length > 0) contrastCheckedPages++;
 
-    const pageContrastIssues = checkPageContrast(doc, loc);
+    const pageContrastIssues = checkPageContrast(doc, loc, pUrl);
     contrastIssues.push(...pageContrastIssues);
 
     const pageContrastIssuesClean = pageContrastIssues.map(i => ({ issue: i.issue, fix: i.fix, fgHex: i.fgHex, bgHex: i.bgHex, ratio: i.ratio, threshold: i.threshold }));
@@ -1255,7 +1292,7 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc) {
   for (const [path, pf] of Object.entries(pageFindings)) {
     const key = pf.moduleName;
     if (!results.byModule[key]) results.byModule[key] = [];
-    results.byModule[key].push({ pageName: pf.pageName, findings: pf.findings });
+    results.byModule[key].push({ pageName: pf.pageName, pageUrl: pf.pageUrl, findings: pf.findings });
   }
 
   const videoFiles = mediaFiles.filter(f => /\.(mp4|mov|avi|webm)$/i.test(f));
@@ -1494,8 +1531,16 @@ function renderCheck(c) {
            <span class="contrast-ratio-pill">${i.ratio}:1 (need ${i.threshold}:1)</span>
          </div>`
       : '';
+    const locHtml = i.url
+      ? `<a href="${escHtml(i.url)}" target="_blank" rel="noopener"
+            style="font-size:10.5px;font-weight:600;font-family:var(--font-mono);letter-spacing:.02em;color:var(--c-accent);text-decoration:none;display:inline-flex;align-items:center;gap:3px"
+            title="Open page in Canvas">
+           ${escHtml(i.loc||'')}
+           <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1.5 8.5l7-7M8.5 1.5H4M8.5 1.5v4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+         </a>`
+      : `<span class="issue-loc">${escHtml(i.loc||'Manual check')}</span>`;
     return `<div class="${c.status==='fail'?'issue-item':'warn-item'}">
-      <div class="issue-loc">${i.loc||'Manual check'}</div>
+      ${locHtml}
       <div class="issue-desc">${i.issue}</div>
       ${swatchHtml}
       ${i.fix?`<div class="issue-fix">Suggestion: ${i.fix}</div>`:''}
@@ -1611,9 +1656,20 @@ function renderPageBlock(page, pid) {
 
   const findingsHtml = page.findings.map(f => renderFinding(f)).join('');
 
+  const linkHtml = page.pageUrl
+    ? `<a href="${escHtml(page.pageUrl)}" target="_blank" rel="noopener" title="Open page in Canvas"
+          onclick="event.stopPropagation()"
+          style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;color:var(--c-accent);text-decoration:none;padding:2px 8px;border-radius:var(--r-sm);border:1px solid rgba(37,99,235,.25);background:var(--c-accent-bg);flex-shrink:0;transition:background .15s"
+          onmouseover="this.style.background='rgba(37,99,235,.18)'"
+          onmouseout="this.style.background='var(--c-accent-bg)'">
+         <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 8.5l7-7M8.5 1.5H4M8.5 1.5v4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+         Open
+       </a>`
+    : '';
+
   return `<div class="page-block">
     <div class="page-hdr" onclick="togglePage('${pid}')">
-      <h4>${smallIcon} ${escHtml(page.pageName)}</h4>
+      <h4>${smallIcon} ${escHtml(page.pageName)} ${linkHtml}</h4>
       <div style="display:flex;align-items:center;gap:6px">
         <div class="badges">${badgesHtml}</div>
         <span class="chevron" id="chev-${pid}" style="font-size:9px">▼</span>
@@ -1794,6 +1850,12 @@ function pdfModuleView(doc, W, M, CW, startY) {
       doc.setFontSize(9);
       doc.setTextColor(30,30,30);
       doc.text(doc.splitTextToSize(`Page: ${page.pageName}`, CW-10)[0], M+5, y+4.8);
+      if (page.pageUrl) {
+        doc.setFont('helvetica','normal');
+        doc.setFontSize(6.5);
+        doc.setTextColor(37,99,235);
+        doc.text(doc.splitTextToSize(page.pageUrl, CW-10)[0], M+CW-4, y+4.8, {align:'right'});
+      }
       y += 9;
 
       for (const f of page.findings) {
@@ -1855,9 +1917,10 @@ function pdfModuleView(doc, W, M, CW, startY) {
           } else {
             // Standard issue row
             const locLines  = issue.loc  ? doc.splitTextToSize(issue.loc, INNER - 4) : [];
+            const urlLines  = issue.url  ? doc.splitTextToSize(issue.url, INNER - 4) : [];
             const descLines = doc.splitTextToSize(issue.issue || '', INNER - 4);
             const fixLines  = issue.fix  ? doc.splitTextToSize(`Suggestion: ${issue.fix}`, INNER - 4) : [];
-            const blockH    = (locLines.length + descLines.length + fixLines.length) * lineH + (fixLines.length > 0 ? 2 : 0) + 5;
+            const blockH    = (locLines.length + urlLines.length + descLines.length + fixLines.length) * lineH + (fixLines.length > 0 ? 2 : 0) + 5;
             if (y + blockH > PDF_BOTTOM) { doc.addPage(); y = 20; }
             doc.setFillColor(...bgColor);
             doc.roundedRect(TXT - 1, y - 1, INNER + 2, blockH, 1, 1, 'F');
@@ -1871,6 +1934,13 @@ function pdfModuleView(doc, W, M, CW, startY) {
               doc.setTextColor(90,90,90);
               doc.text(locLines, TXT + 5, ty);
               ty += locLines.length * lineH;
+            }
+            if (urlLines.length > 0) {
+              doc.setFont('helvetica','normal');
+              doc.setFontSize(6.5);
+              doc.setTextColor(37,99,235);
+              doc.text(urlLines, TXT + 5, ty);
+              ty += urlLines.length * lineH;
             }
             doc.setFont('helvetica','bold');
             doc.setFontSize(7.5);
@@ -1975,9 +2045,10 @@ function pdfChecksView(doc, W, M, CW, startY) {
         } else {
           // Standard issue
           const locLines  = issue.loc  ? doc.splitTextToSize(issue.loc, INNER - 4) : [];
+          const urlLines  = issue.url  ? doc.splitTextToSize(issue.url, INNER - 4) : [];
           const descLines = doc.splitTextToSize(issue.issue || '', INNER - 4);
           const fixLines  = issue.fix  ? doc.splitTextToSize(`Suggestion: ${issue.fix}`, INNER - 4) : [];
-          const blockH    = (locLines.length + descLines.length + fixLines.length) * lineH + (fixLines.length > 0 ? 2 : 0) + 5;
+          const blockH    = (locLines.length + urlLines.length + descLines.length + fixLines.length) * lineH + (fixLines.length > 0 ? 2 : 0) + 5;
           if (y + blockH > PDF_BOTTOM) { doc.addPage(); y = 20; }
           doc.setFillColor(bgFail ? 255 : 255, bgFail ? 245 : 251, bgFail ? 245 : 235);
           doc.roundedRect(CBX - 1, y - 1, CW - CBX + M + 2, blockH, 1, 1, 'F');
@@ -1991,6 +2062,13 @@ function pdfChecksView(doc, W, M, CW, startY) {
             doc.setTextColor(90,90,90);
             doc.text(locLines, CBX + 5, ty);
             ty += locLines.length * lineH;
+          }
+          if (urlLines.length > 0) {
+            doc.setFont('helvetica','normal');
+            doc.setFontSize(6.5);
+            doc.setTextColor(37,99,235);
+            doc.text(urlLines, CBX + 5, ty);
+            ty += urlLines.length * lineH;
           }
           doc.setFont('helvetica','bold');
           doc.setFontSize(7.5);

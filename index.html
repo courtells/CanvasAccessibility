@@ -672,7 +672,6 @@ body{
 }
 </style>
 
-<h2 class="sr-only">Canvas IMSCC Accessibility Checker — upload a zip file to audit your course shell for WCAG 2.1 AA compliance.</h2>
 <div id="app">
   <div class="hdr">
     <div class="hdr-icon">
@@ -767,6 +766,10 @@ body{
     <div id="results-body"></div>
     <div class="actions">
       <button class="btn primary" onclick="downloadPDF()">Download PDF report</button>
+      <button class="btn" onclick="downloadSpreadsheet()" style="background:white;border-color:var(--c-border-strong)">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" stroke="#16a34a" stroke-width="1.3"/><path d="M1 4.5h12M5 4.5v8.5" stroke="#16a34a" stroke-width="1.1"/><path d="M3 7.5l1.5 1.5L6 7M8.5 7h3M8.5 9.5h2.5" stroke="#16a34a" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span style="color:#16a34a;font-weight:600">Download Spreadsheet</span>
+      </button>
       <button class="btn" onclick="resetTool()">Check another file</button>
     </div>
   </div>
@@ -774,6 +777,7 @@ body{
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 let auditData = null;
 let fileObj = null;
@@ -1948,6 +1952,354 @@ function downloadPDF() {
   }
 
   doc.save(`canvas-accessibility-audit-${new Date().toISOString().slice(0,10)}.pdf`);
+}
+
+// ─── Spreadsheet export ───────────────────────────────────────────────────────
+function downloadSpreadsheet() {
+  if (!auditData || !window.XLSX) return;
+  const wb = XLSX.utils.book_new();
+  const dateStr = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+  const fileName = fileObj ? fileObj.name : 'Unknown';
+
+  // ── Helper: apply column widths ──────────────────────────────────────────────
+  function setColWidths(ws, widths) {
+    ws['!cols'] = widths.map(w => ({ wch: w }));
+  }
+
+  // ── Shared styles ────────────────────────────────────────────────────────────
+  const hdrStyle = { font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 }, fill: { fgColor: { rgb: '1E3A5F' } }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true }, border: { bottom: { style: 'thin', color: { rgb: 'AAAAAA' } } } };
+  const passStyle = { font: { bold: true, color: { rgb: '14532D' } }, fill: { fgColor: { rgb: 'DCFCE7' } }, alignment: { horizontal: 'center', vertical: 'center' } };
+  const failStyle = { font: { bold: true, color: { rgb: '7F1D1D' } }, fill: { fgColor: { rgb: 'FEE2E2' } }, alignment: { horizontal: 'center', vertical: 'center' } };
+  const warnStyle = { font: { bold: true, color: { rgb: '78350F' } }, fill: { fgColor: { rgb: 'FEF3C7' } }, alignment: { horizontal: 'center', vertical: 'center' } };
+  const bodyStyle = { alignment: { vertical: 'top', wrapText: true }, font: { sz: 10 } };
+  const monoStyle = { font: { name: 'Courier New', sz: 9, color: { rgb: '444444' } }, alignment: { vertical: 'top', wrapText: true } };
+  const sectionStyle = { font: { bold: true, sz: 11, color: { rgb: '1E3A5F' } }, fill: { fgColor: { rgb: 'EBF0FA' } }, alignment: { vertical: 'center' } };
+  const subHdrStyle = { font: { bold: true, sz: 10, color: { rgb: '374151' } }, fill: { fgColor: { rgb: 'F3F4F6' } }, alignment: { vertical: 'center', wrapText: true } };
+  const checkboxStyle = { font: { sz: 12 }, alignment: { horizontal: 'center', vertical: 'center' } };
+
+  function statusStyle(s) { return s === 'pass' ? passStyle : s === 'fail' ? failStyle : warnStyle; }
+  function statusLabel(s) { return s === 'pass' ? '✅ PASS' : s === 'fail' ? '❌ FAIL' : '⚠️ MANUAL'; }
+  function cell(v, s) { return { v, t: typeof v === 'number' ? 'n' : 's', s }; }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // SHEET 1 — SUMMARY
+  // ════════════════════════════════════════════════════════════════════════════
+  (function buildSummary() {
+    const rows = [];
+    rows.push([cell('Canvas Course Accessibility Audit', { font: { bold: true, sz: 16, color: { rgb: '1E3A5F' } } })]);
+    rows.push([cell(`File: ${fileName}`, { font: { sz: 10, color: { rgb: '6B7280' } } })]);
+    rows.push([cell(`Generated: ${dateStr}  |  Standard: WCAG 2.1 AA`, { font: { sz: 10, color: { rgb: '6B7280' } } })]);
+    rows.push([]);
+
+    // Overall counts — individual issues (not checks)
+    let totalFail = 0, totalWarn = 0, totalPass = 0;
+    for (const sec of auditData.sections) {
+      for (const c of sec.checks) {
+        if (!c.issues || c.issues.length === 0) {
+          if (c.status === 'pass') totalPass++;
+          else if (c.status === 'fail') totalFail++;
+          else totalWarn++;
+        } else {
+          for (const issue of c.issues) {
+            if (c.status === 'pass') totalPass++;
+            else if (c.status === 'fail') totalFail++;
+            else totalWarn++;
+          }
+        }
+      }
+    }
+    rows.push([cell('OVERALL RESULTS', sectionStyle), cell(''), cell(''), cell('')]);
+    rows.push([cell('Category', hdrStyle), cell('Count', hdrStyle), cell('Description', hdrStyle)]);
+    rows.push([cell('❌ Issues (FAIL)', failStyle), cell(totalFail, { ...failStyle, alignment: { horizontal: 'center' } }), cell('Individual accessibility failures requiring fixes', bodyStyle)]);
+    rows.push([cell('⚠️ Manual Checks', warnStyle), cell(totalWarn, { ...warnStyle, alignment: { horizontal: 'center' } }), cell('Individual items requiring human review', bodyStyle)]);
+    rows.push([cell('✅ Passed', passStyle), cell(totalPass, { ...passStyle, alignment: { horizontal: 'center' } }), cell('Individual items that passed automatically', bodyStyle)]);
+    rows.push([cell('📊 Total Items', subHdrStyle), cell(totalFail + totalWarn + totalPass, { ...subHdrStyle, alignment: { horizontal: 'center' } }), cell('', bodyStyle)]);
+    rows.push([]);
+
+    // By-module summary table
+    rows.push([cell('MODULE SUMMARY', sectionStyle), cell(''), cell(''), cell(''), cell('')]);
+    rows.push([cell('Module', hdrStyle), cell('Pages', hdrStyle), cell('Issues', hdrStyle), cell('Manual', hdrStyle), cell('Passed', hdrStyle)]);
+    const keys = sortedModuleKeys(auditData.byModule);
+    for (const key of keys) {
+      const pages = sortedModulePages(key, auditData.byModule[key]);
+      const s = moduleStats(pages);
+      const isUnattached = key === UNATTACHED_KEY;
+      rows.push([
+        cell(isUnattached ? 'Not attached to a module' : key, bodyStyle),
+        cell(pages.length, { alignment: { horizontal: 'center' }, font: { sz: 10 } }),
+        cell(s.fail, s.fail > 0 ? { ...failStyle } : { alignment: { horizontal: 'center' }, font: { sz: 10 } }),
+        cell(s.warn, s.warn > 0 ? { ...warnStyle } : { alignment: { horizontal: 'center' }, font: { sz: 10 } }),
+        cell(s.pass, s.pass > 0 ? { ...passStyle } : { alignment: { horizontal: 'center' }, font: { sz: 10 } }),
+      ]);
+    }
+    rows.push([]);
+
+    // Check-type summary
+    rows.push([cell('CHECK TYPE SUMMARY', sectionStyle), cell(''), cell(''), cell('')]);
+    rows.push([cell('Category', hdrStyle), cell('Check', hdrStyle), cell('Status', hdrStyle), cell('WCAG Criterion', hdrStyle)]);
+    for (const sec of auditData.sections) {
+      const firstRow = true;
+      rows.push([cell(sec.label, sectionStyle), cell(''), cell(''), cell('')]);
+      for (const c of sec.checks) {
+        rows.push([
+          cell('', bodyStyle),
+          cell(c.title, bodyStyle),
+          cell(statusLabel(c.status), statusStyle(c.status)),
+          cell(c.wcag, monoStyle),
+        ]);
+      }
+    }
+
+    const ws = XLSX.utils.aoa_to_sheet(rows.map(r => r.map(c => c && c.v !== undefined ? c.v : '')));
+    // Re-apply cell styles
+    let ri = 0;
+    for (const row of rows) {
+      let ci = 0;
+      for (const c of row) {
+        if (c && c.s) {
+          const addr = XLSX.utils.encode_cell({ r: ri, c: ci });
+          if (!ws[addr]) ws[addr] = { v: c.v, t: c.t || 's' };
+          ws[addr].s = c.s;
+        }
+        ci++;
+      }
+      ri++;
+    }
+    ws['!merges'] = [
+      { s:{r:0,c:0}, e:{r:0,c:4} },
+      { s:{r:1,c:0}, e:{r:1,c:4} },
+      { s:{r:2,c:0}, e:{r:2,c:4} },
+    ];
+    setColWidths(ws, [38, 10, 12, 12, 12]);
+    XLSX.utils.book_append_sheet(wb, ws, 'Summary');
+  })();
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // SHEET 2 — FULL CHECKLIST (flat, one row per issue/check)
+  // ════════════════════════════════════════════════════════════════════════════
+  (function buildChecklist() {
+    const rows = [];
+    rows.push([
+      cell('✓ Done', hdrStyle),
+      cell('Status', hdrStyle),
+      cell('Module', hdrStyle),
+      cell('Page', hdrStyle),
+      cell('Check', hdrStyle),
+      cell('WCAG', hdrStyle),
+      cell('Issue / Detail', hdrStyle),
+      cell('Location', hdrStyle),
+      cell('Suggestion / Fix', hdrStyle),
+    ]);
+
+    const keys = sortedModuleKeys(auditData.byModule);
+    for (const key of keys) {
+      const pages = sortedModulePages(key, auditData.byModule[key]);
+      const modName = key === UNATTACHED_KEY ? 'Not attached to a module' : key;
+      for (const page of pages) {
+        for (const f of page.findings) {
+          const st = statusStyle(f.status);
+          const stLabel = statusLabel(f.status);
+          if (!f.issues || f.issues.length === 0) {
+            rows.push([
+              cell('☐', checkboxStyle),
+              cell(stLabel, st),
+              cell(modName, bodyStyle),
+              cell(page.pageName, bodyStyle),
+              cell(f.title, bodyStyle),
+              cell(f.wcag, monoStyle),
+              cell(f.detail || '', bodyStyle),
+              cell('', bodyStyle),
+              cell('', bodyStyle),
+            ]);
+          } else {
+            for (const issue of f.issues) {
+              rows.push([
+                cell(f.status === 'pass' ? '✅' : '☐', checkboxStyle),
+                cell(stLabel, st),
+                cell(modName, bodyStyle),
+                cell(page.pageName, bodyStyle),
+                cell(f.checkLabel || f.title, bodyStyle),
+                cell(f.wcag, monoStyle),
+                cell(issue.issue || f.title || '', bodyStyle),
+                cell(issue.loc || '', monoStyle),
+                cell(issue.fix || '', { ...bodyStyle, font: { italic: true, sz: 10, color: { rgb: '6B7280' } } }),
+              ]);
+            }
+          }
+        }
+      }
+    }
+
+    const ws = XLSX.utils.aoa_to_sheet(rows.map(r => r.map(c => c && c.v !== undefined ? c.v : '')));
+    let ri = 0;
+    for (const row of rows) {
+      let ci = 0;
+      for (const c of row) {
+        if (c && c.s) {
+          const addr = XLSX.utils.encode_cell({ r: ri, c: ci });
+          if (!ws[addr]) ws[addr] = { v: c.v, t: c.t || 's' };
+          ws[addr].s = c.s;
+        }
+        ci++;
+      }
+      ri++;
+    }
+    ws['!autofilter'] = { ref: `A1:I${rows.length}` };
+    setColWidths(ws, [8, 14, 28, 30, 30, 22, 48, 30, 40]);
+    // Freeze the header row
+    ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+    XLSX.utils.book_append_sheet(wb, ws, 'Full Checklist');
+  })();
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // SHEET 3 — ISSUES ONLY (actionable items)
+  // ════════════════════════════════════════════════════════════════════════════
+  (function buildIssues() {
+    const rows = [];
+    rows.push([
+      cell('✓ Fixed', hdrStyle),
+      cell('Priority', hdrStyle),
+      cell('Module', hdrStyle),
+      cell('Page', hdrStyle),
+      cell('Check', hdrStyle),
+      cell('WCAG Criterion', hdrStyle),
+      cell('Issue Description', hdrStyle),
+      cell('Location', hdrStyle),
+      cell('Suggested Fix', hdrStyle),
+      cell('Notes', hdrStyle),
+    ]);
+
+    let rowCount = 0;
+    const keys = sortedModuleKeys(auditData.byModule);
+    for (const key of keys) {
+      const pages = sortedModulePages(key, auditData.byModule[key]);
+      const modName = key === UNATTACHED_KEY ? 'Not attached to a module' : key;
+      for (const page of pages) {
+        for (const f of page.findings) {
+          if (f.status !== 'fail' && f.status !== 'warn') continue;
+          const st = statusStyle(f.status);
+          const priority = f.status === 'fail' ? cell('HIGH – Fix Required', failStyle) : cell('REVIEW – Manual Check', warnStyle);
+          if (!f.issues || f.issues.length === 0) {
+            rows.push([cell('☐', checkboxStyle), priority, cell(modName, bodyStyle), cell(page.pageName, bodyStyle), cell(f.title, bodyStyle), cell(f.wcag, monoStyle), cell(f.detail || '', bodyStyle), cell('', bodyStyle), cell('', bodyStyle), cell('', bodyStyle)]);
+            rowCount++;
+          } else {
+            for (const issue of f.issues) {
+              rows.push([cell('☐', checkboxStyle), priority, cell(modName, bodyStyle), cell(page.pageName, bodyStyle), cell(f.checkLabel || f.title, bodyStyle), cell(f.wcag, monoStyle), cell(issue.issue || '', bodyStyle), cell(issue.loc || '', monoStyle), cell(issue.fix || '', { ...bodyStyle, font: { italic: true, sz: 10 } }), cell('', bodyStyle)]);
+              rowCount++;
+            }
+          }
+        }
+      }
+    }
+
+    if (rowCount === 0) {
+      rows.push([cell('🎉 No issues found — all checks passed!', { font: { bold: true, color: { rgb: '14532D' } }, fill: { fgColor: { rgb: 'DCFCE7' } } })]);
+    }
+
+    const ws = XLSX.utils.aoa_to_sheet(rows.map(r => r.map(c => c && c.v !== undefined ? c.v : '')));
+    let ri = 0;
+    for (const row of rows) {
+      let ci = 0;
+      for (const c of row) {
+        if (c && c.s) {
+          const addr = XLSX.utils.encode_cell({ r: ri, c: ci });
+          if (!ws[addr]) ws[addr] = { v: c.v, t: c.t || 's' };
+          ws[addr].s = c.s;
+        }
+        ci++;
+      }
+      ri++;
+    }
+    ws['!autofilter'] = { ref: `A1:J${rows.length}` };
+    setColWidths(ws, [8, 22, 28, 30, 30, 22, 48, 30, 40, 20]);
+    XLSX.utils.book_append_sheet(wb, ws, 'Issues & Manual Checks');
+  })();
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // SHEET 4 — BY CHECK TYPE
+  // ════════════════════════════════════════════════════════════════════════════
+  (function buildByCheck() {
+    const rows = [];
+    rows.push([
+      cell('✓ Done', hdrStyle),
+      cell('Category', hdrStyle),
+      cell('Check', hdrStyle),
+      cell('Status', hdrStyle),
+      cell('WCAG', hdrStyle),
+      cell('Description / Detail', hdrStyle),
+      cell('Affected Page', hdrStyle),
+      cell('Location', hdrStyle),
+      cell('Suggestion', hdrStyle),
+    ]);
+
+    for (const sec of auditData.sections) {
+      // Section header row
+      rows.push([
+        cell('', {}),
+        cell(sec.label, sectionStyle),
+        cell('', sectionStyle), cell('', sectionStyle), cell('', sectionStyle),
+        cell('', sectionStyle), cell('', sectionStyle), cell('', sectionStyle), cell('', sectionStyle),
+      ]);
+      for (const c of sec.checks) {
+        const st = statusStyle(c.status);
+        const stLabel = statusLabel(c.status);
+        if (!c.issues || c.issues.length === 0) {
+          rows.push([
+            cell(c.status === 'pass' ? '✅' : '☐', checkboxStyle),
+            cell(sec.label, bodyStyle),
+            cell(c.title, bodyStyle),
+            cell(stLabel, st),
+            cell(c.wcag, monoStyle),
+            cell(c.detail || '', bodyStyle),
+            cell('', bodyStyle),
+            cell('', bodyStyle),
+            cell('', bodyStyle),
+          ]);
+        } else {
+          for (const issue of c.issues) {
+            // Find page name for this issue
+            let pageName = '';
+            if (issue.loc) {
+              const parts = issue.loc.split('/');
+              pageName = parts[parts.length - 1] || issue.loc;
+            }
+            rows.push([
+              cell(c.status === 'pass' ? '✅' : '☐', checkboxStyle),
+              cell(sec.label, bodyStyle),
+              cell(c.title, bodyStyle),
+              cell(stLabel, st),
+              cell(c.wcag, monoStyle),
+              cell(issue.issue || c.detail || '', bodyStyle),
+              cell(pageName, bodyStyle),
+              cell(issue.loc || '', monoStyle),
+              cell(issue.fix || '', { ...bodyStyle, font: { italic: true, sz: 10 } }),
+            ]);
+          }
+        }
+      }
+    }
+
+    const ws = XLSX.utils.aoa_to_sheet(rows.map(r => r.map(c => c && c.v !== undefined ? c.v : '')));
+    let ri = 0;
+    for (const row of rows) {
+      let ci = 0;
+      for (const c of row) {
+        if (c && c.s) {
+          const addr = XLSX.utils.encode_cell({ r: ri, c: ci });
+          if (!ws[addr]) ws[addr] = { v: c.v, t: c.t || 's' };
+          ws[addr].s = c.s;
+        }
+        ci++;
+      }
+      ri++;
+    }
+    ws['!autofilter'] = { ref: `A1:I${rows.length}` };
+    setColWidths(ws, [8, 22, 30, 16, 22, 48, 30, 30, 40]);
+    XLSX.utils.book_append_sheet(wb, ws, 'By Check Type');
+  })();
+
+  // Write and trigger download
+  XLSX.writeFile(wb, `canvas-accessibility-checklist-${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 
 // ── PDF helpers ───────────────────────────────────────────────────────────────

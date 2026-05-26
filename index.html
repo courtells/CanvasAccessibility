@@ -230,7 +230,7 @@ body{
 }
 .summary-card .lbl{
   font-size: 10.5px;
-  color: var(--c-ink-ghost);
+  color: #5f6470;
   margin-top: 5px;
   text-transform: uppercase;
   letter-spacing: .08em;
@@ -266,7 +266,7 @@ body{
   cursor: pointer;
   font-family: var(--font-body);
   font-weight: 500;
-  color: var(--c-ink-muted);
+  color: #565c6b;
   transition: all .15s;
   letter-spacing: -.1px;
   display: flex;
@@ -300,7 +300,7 @@ body{
   cursor: pointer;
   font-family: var(--font-body);
   font-weight: 500;
-  color: var(--c-ink-muted);
+  color: #565c6b;
   transition: all .15s;
   letter-spacing: -.1px;
 }
@@ -354,10 +354,10 @@ body{
   font-weight: 600;
   letter-spacing: .01em;
 }
-.badge-pass{background: var(--c-pass-bg); color: var(--c-pass)}
-.badge-fail{background: var(--c-fail-bg); color: var(--c-fail)}
-.badge-warn{background: var(--c-warn-bg); color: var(--c-warn)}
-.badge-manual{background: var(--c-surface-3); color: var(--c-ink-muted)}
+.badge-pass{background: var(--c-pass-bg); color: #11813a}
+.badge-fail{background: var(--c-fail-bg); color: #b91c1c}
+.badge-warn{background: var(--c-warn-bg); color: #92400e}
+.badge-manual{background: var(--c-surface-3); color: #4b5563}
 
 .chevron{
   font-size: 10px;
@@ -567,6 +567,20 @@ body{
   line-height: 1.5;
 }
 
+/* Check-type view: done state overrides */
+.issue-item.cl-inline-done,
+.warn-item.cl-inline-done{
+  opacity: .5;
+  background: var(--c-surface-2) !important;
+  border-left-color: var(--c-pass) !important;
+}
+.issue-item.cl-inline-done .issue-desc,
+.warn-item.cl-inline-done .issue-desc,
+.issue-item.cl-inline-done .issue-loc,
+.warn-item.cl-inline-done .issue-loc,
+.issue-item.cl-inline-done .issue-fix,
+.warn-item.cl-inline-done .issue-fix{ text-decoration: line-through; color: var(--c-ink-ghost); }
+
 /* Module-view issue cards — black text for contrast compliance */
 .mod-issue-item, .mod-warn-item, .mod-pass-item{
   border-radius: var(--r-sm);
@@ -584,6 +598,33 @@ body{
   margin-top: 3px;
   font-style: italic;
 }
+.cl-inline-item{
+  cursor: pointer;
+  transition: opacity .2s, background .15s;
+  user-select: none;
+}
+.cl-inline-item:hover{ filter: brightness(.97); }
+.cl-inline-done{
+  opacity: .5;
+  background: var(--c-surface-2) !important;
+  border-left-color: var(--c-pass) !important;
+}
+.cl-inline-done .cl-inline-text{ text-decoration: line-through; color: var(--c-ink-ghost); }
+.cl-inline-done .fix{ text-decoration: line-through; }
+.cl-inline-check{
+  width: 15px; height: 15px;
+  border-radius: 3px;
+  border: 1.5px solid var(--c-border-strong);
+  flex-shrink: 0;
+  margin-top: 1px;
+  display: flex; align-items: center; justify-content: center;
+  background: white;
+  transition: all .15s;
+}
+.cl-inline-checked{
+  background: var(--c-pass);
+  border-color: var(--c-pass);
+}
 
 /* ── Status icon ──────────────────────────────────────────────────────────── */
 .status-icon{
@@ -595,6 +636,23 @@ body{
 
 /* ── Actions ──────────────────────────────────────────────────────────────── */
 .actions{display: flex; gap: 8px; margin-top: 1.25rem; flex-wrap: wrap}
+.cl-tab{font-size:11.5px;padding:4px 12px;border-radius:100px;border:1px solid var(--c-border-strong);background:transparent;cursor:pointer;font-family:var(--font-body);color:var(--c-ink-muted);transition:all .12s;white-space:nowrap}
+.cl-tab.active{background:var(--c-ink);color:white;border-color:var(--c-ink)}
+.cl-tab:hover:not(.active){background:var(--c-surface-2)}
+.cl-item{display:flex;align-items:flex-start;gap:10px;padding:.65rem .75rem;border-radius:var(--r-md);border:1px solid var(--c-border);background:var(--c-surface);margin-bottom:.5rem;transition:all .2s;cursor:pointer}
+.cl-item:hover{background:var(--c-surface-2)}
+.cl-item.done{opacity:.55;background:var(--c-surface-2)}
+.cl-item.done .cl-item-title{text-decoration:line-through;color:var(--c-ink-ghost)}
+.cl-checkbox{width:17px;height:17px;border-radius:4px;border:1.5px solid var(--c-border-strong);flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .15s;background:white}
+.cl-item.done .cl-checkbox{background:var(--c-pass);border-color:var(--c-pass)}
+.cl-item-body{flex:1;min-width:0}
+.cl-item-title{font-size:12.5px;font-weight:500;color:var(--c-ink);line-height:1.4;margin-bottom:2px}
+.cl-item-meta{font-size:11px;color:var(--c-ink-ghost);display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:3px}
+.cl-item-fix{font-size:11px;color:var(--c-ink-muted);line-height:1.4;font-style:italic}
+.cl-severity{font-size:10px;font-weight:600;padding:1px 6px;border-radius:100px}
+.cl-severity.fail{background:var(--c-fail-bg);color:#b91c1c}
+.cl-severity.warn{background:var(--c-warn-bg);color:#92400e}
+.cl-empty{text-align:center;padding:2.5rem 1rem;color:var(--c-ink-ghost);font-size:13px}
 
 /* ── Visibility ───────────────────────────────────────────────────────────── */
 #results{display:none}
@@ -745,6 +803,20 @@ body{
 
   <div id="results">
 
+    <!-- Checklist progress bar -->
+    <div id="inline-cl-bar" style="display:none;background:white;border:1px solid var(--c-border);border-radius:var(--r-lg);padding:.65rem 1rem;margin-bottom:.85rem;display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+        <span style="font-size:12px;font-weight:500;color:var(--c-ink-soft)">Fix progress</span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span id="inline-cl-label" style="font-size:12px;font-weight:600;color:#1d4ed8">0 of 0 fixed</span>
+          <button class="btn" onclick="clClearAll()" style="font-size:11px;padding:4px 10px">Reset progress</button>
+        </div>
+      </div>
+      <div style="height:5px;border-radius:3px;background:var(--c-surface-3);overflow:hidden">
+        <div id="inline-cl-bar-fill" style="height:100%;border-radius:3px;background:var(--c-accent);width:0%;transition:width .3s ease"></div>
+      </div>
+    </div>
+
     <!-- View toggle + filter bar -->
     <div class="view-toggle-wrap">
       <div class="view-toggle">
@@ -757,6 +829,10 @@ body{
           By Check Type
         </button>
       </div>
+      <button class="btn" id="expand-issues-btn" onclick="expandIssues()" style="font-size:12px;white-space:nowrap;display:none" data-expanded="false">
+        <svg id="expand-issues-icon" width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 4.5l4.5 4.5 4.5-4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 1v8M2 9.5h9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <span id="expand-issues-label">Expand all with issues</span>
+      </button>
       <div class="filter-bar" id="filter-bar">
         <button class="filter-btn active" onclick="filterResults('all',this)">All</button>
         <button class="filter-btn" onclick="filterResults('fail',this)">Issues only</button>
@@ -770,10 +846,33 @@ body{
       <button class="btn primary" onclick="downloadPDF()">Download PDF report</button>
       <button class="btn" onclick="downloadSpreadsheet()" style="background:white;border-color:var(--c-border-strong)">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" stroke="#16a34a" stroke-width="1.3"/><path d="M1 4.5h12M5 4.5v8.5" stroke="#16a34a" stroke-width="1.1"/><path d="M3 7.5l1.5 1.5L6 7M8.5 7h3M8.5 9.5h2.5" stroke="#16a34a" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span style="color:#16a34a;font-weight:600">Download Spreadsheet</span>
+        <span style="color:#12883d;font-weight:600">Download Spreadsheet</span>
       </button>
-      <button class="btn" onclick="resetTool()">Check another file</button>
+
+      <div style="width:1px;background:var(--c-border-strong);align-self:stretch;margin:0 2px;flex-shrink:0"></div>
+      <button class="btn" onclick="confirmReset()">Clear all and check another file</button>
     </div>
+  </div>
+</div>
+
+
+
+
+<!-- ── Confirm-reset modal ──────────────────────────────────────────────────── -->
+<div id="confirm-modal-overlay" onclick="closeConfirmModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:950;animation:fadeIn .15s ease"></div>
+<div id="confirm-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-54%);background:white;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.18);z-index:951;width:min(380px,90vw);padding:1.5rem 1.5rem 1.25rem;animation:fadeUp .2s ease">
+  <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:1rem">
+    <div style="width:36px;height:36px;border-radius:50%;background:#fee2e2;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 3L1.5 15h15L9 3z" stroke="#b91c1c" stroke-width="1.5" stroke-linejoin="round"/><path d="M9 8v3.5" stroke="#b91c1c" stroke-width="1.5" stroke-linecap="round"/><circle cx="9" cy="13.5" r=".75" fill="#b91c1c"/></svg>
+    </div>
+    <div>
+      <h2 style="font-size:14px;font-weight:600;color:#0f1117;margin-bottom:4px;letter-spacing:-.2px">Clear all progress?</h2>
+      <p style="font-size:13px;color:#6b7280;line-height:1.5">All checked items and fix progress will be permanently erased. This cannot be undone.</p>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;justify-content:flex-end">
+    <button class="btn" onclick="closeConfirmModal()" style="font-size:13px">Cancel</button>
+    <button class="btn" onclick="resetTool()" style="font-size:13px;background:#b91c1c;color:white;border-color:#b91c1c">Clear and continue</button>
   </div>
 </div>
 
@@ -824,14 +923,32 @@ function handleFile(f) {
   document.getElementById('file-preview').style.display = 'block';
 }
 
+function confirmReset() {
+  const overlay = document.getElementById('confirm-modal-overlay');
+  const modal   = document.getElementById('confirm-modal');
+  overlay.style.display = 'block';
+  modal.style.display   = 'block';
+}
+
+function closeConfirmModal() {
+  document.getElementById('confirm-modal-overlay').style.display = 'none';
+  document.getElementById('confirm-modal').style.display         = 'none';
+}
+
 function resetTool() {
+  closeConfirmModal();
   fileObj = null; auditData = null; canvasBaseUrl = '';
+  Object.keys(clChecked).forEach(k => delete clChecked[k]);
   document.getElementById('upload-area').style.display = 'block';
   document.getElementById('results').style.display = 'none';
   document.getElementById('file-preview').style.display = 'none';
   document.getElementById('progress-area').style.display = 'none';
   document.getElementById('run-btn').disabled = false;
   document.getElementById('canvas-url-input').value = '';
+  const bar = document.getElementById('inline-cl-bar');
+  if (bar) bar.style.display = 'none';
+  const expandBtn = document.getElementById('expand-issues-btn');
+  if (expandBtn) expandBtn.style.display = 'none';
   fileInput.value = '';
 }
 
@@ -881,6 +998,36 @@ async function runAudit() {
     await sleep(300);
 
     auditData = await performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOrder, pageOrder);
+
+    // Stamp a unique _clId on every issue object so checkboxes are always distinct
+    let _clStamp = 0;
+    const _stampFindings = findings => findings.forEach(f => {
+      if (f.issues && f.issues.length) {
+        f.issues.forEach(iss => { iss._clId = 'cl' + (_clStamp++); });
+      } else if (f.status === 'fail' || f.status === 'warn') {
+        f._clId = 'cl' + (_clStamp++);  // manual check row
+      }
+    });
+    if (auditData.byModule) {
+      Object.values(auditData.byModule).forEach(pages =>
+        pages.forEach(p => _stampFindings(p.findings))
+      );
+    }
+    if (auditData.sections) {
+      auditData.sections.forEach(sec =>
+        sec.checks.forEach(chk => {
+          if (chk.issues && chk.issues.length) {
+            chk.issues.forEach(iss => {
+              // reuse existing stamp if already set (shared objects), else new one
+              if (!iss._clId) iss._clId = 'cl' + (_clStamp++);
+            });
+          } else if ((chk.status === 'fail' || chk.status === 'warn') && !chk._clId) {
+            chk._clId = 'cl' + (_clStamp++);
+          }
+        })
+      );
+    }
+
     setProgress(90, 'Generating report...');
     await sleep(300);
 
@@ -1283,11 +1430,11 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOr
       if (alt === null) {
         const issue = { loc, url: pUrl, issue: `Image missing alt attribute (src: ${srcName || 'unknown'})`, fix: 'Add descriptive alt text to the image, or alt="" if purely decorative.' };
         missingAlt.push(issue);
-        pageAltIssues.push({ issue: issue.issue, fix: issue.fix });
+        pageAltIssues.push({ loc, url: pUrl, issue: issue.issue, fix: issue.fix });
       } else if (alt.length > 0 && looksLikeFilename(alt)) {
         const issue = { loc, url: pUrl, issue: `Alt text appears to be a filename: "${alt.substring(0, 60)}"`, fix: 'Replace with a meaningful description of the image content.' };
         missingAlt.push(issue);
-        pageAltIssues.push({ issue: issue.issue, fix: issue.fix });
+        pageAltIssues.push({ loc, url: pUrl, issue: issue.issue, fix: issue.fix });
       }
       if (/text|screenshot|slide/i.test(srcName) && (!alt || alt.length < 10)) {
         // Only add if we haven't already flagged this image for a bad alt
@@ -1295,7 +1442,7 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOr
         if (!alreadyFlagged) {
           const issue = { loc, url: pUrl, issue: `Possible image of text detected (src: ${srcName})`, fix: 'Replace images of text with actual HTML text, or provide full text content in alt attribute.' };
           imagesOfText.push(issue);
-          pageAltIssues.push({ issue: issue.issue, fix: issue.fix });
+          pageAltIssues.push({ loc, url: pUrl, issue: issue.issue, fix: issue.fix });
         }
       }
     });
@@ -1348,11 +1495,11 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOr
       if (!txt || /^(click here|here|link|read more|more|this|download)$/i.test(txt)) {
         const issue = { loc, url: pUrl, issue: `Non-descriptive link text: "${txt || '(empty)'}"`, fix: 'Use meaningful link text that describes the destination (e.g., "Download the course syllabus PDF").' };
         badLinks.push(issue);
-        pageLinkIssues.push({ issue: issue.issue, fix: issue.fix });
+        pageLinkIssues.push({ loc, url: pUrl, issue: issue.issue, fix: issue.fix });
       } else if (looksLikeUrl(txt)) {
         const issue = { loc, url: pUrl, issue: `Link text is a raw URL: "${txt.length > 60 ? txt.substring(0,60)+'…' : txt}"`, fix: 'Replace the URL with a descriptive label (e.g., "Course syllabus" instead of the full URL).' };
         badLinks.push(issue);
-        pageLinkIssues.push({ issue: issue.issue, fix: issue.fix });
+        pageLinkIssues.push({ loc, url: pUrl, issue: issue.issue, fix: issue.fix });
       }
     });
     if (links.length > 0) {
@@ -1374,11 +1521,11 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOr
       if (!headers.length) {
         const issue = { loc, url: pUrl, issue: 'Data table found with no <th> header cells', fix: 'Mark header row cells as <th> elements with appropriate scope="col" or scope="row" attributes.' };
         tableIssues.push(issue);
-        pageTableIssues.push({ issue: issue.issue, fix: issue.fix });
+        pageTableIssues.push({ loc, url: pUrl, issue: issue.issue, fix: issue.fix });
       } else if (!scope) {
         const issue = { loc, url: pUrl, issue: 'Table has <th> headers but no scope attribute', fix: 'Add scope="col" or scope="row" to all <th> elements to clarify header direction.' };
         tableIssues.push(issue);
-        pageTableIssues.push({ issue: issue.issue, fix: issue.fix });
+        pageTableIssues.push({ loc, url: pUrl, issue: issue.issue, fix: issue.fix });
       }
     });
     if (tables.length > 0) {
@@ -1399,7 +1546,7 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOr
       if (wordCount >= 250) {
         const issue = { loc, url: pUrl, issue: 'Long content page has no heading structure', fix: 'Use HTML headings (H1–H3) to organize content into logical sections.' };
         missingHeadings.push(issue);
-        pageHeadingIssues.push({ issue: issue.issue, fix: issue.fix });
+        pageHeadingIssues.push({ loc, url: pUrl, issue: issue.issue, fix: issue.fix });
       }
     }
     let prevLevel = 0;
@@ -1408,7 +1555,7 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOr
       if (level > prevLevel + 1 && prevLevel > 0) {
         const issue = { loc, url: pUrl, issue: `Heading level skipped: H${prevLevel} → H${level} ("${h.textContent.trim().substring(0,40)}")`, fix: `Don't skip heading levels. Use H${prevLevel+1} instead of H${level}.` };
         missingHeadings.push(issue);
-        pageHeadingIssues.push({ issue: issue.issue, fix: issue.fix });
+        pageHeadingIssues.push({ loc, url: pUrl, issue: issue.issue, fix: issue.fix });
       }
       prevLevel = level;
     });
@@ -1428,7 +1575,7 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOr
     const pageContrastIssues = checkPageContrast(doc, loc, pUrl);
     contrastIssues.push(...pageContrastIssues);
 
-    const pageContrastIssuesClean = pageContrastIssues.map(i => ({ issue: i.issue, fix: i.fix, fgHex: i.fgHex, bgHex: i.bgHex, ratio: i.ratio, threshold: i.threshold }));
+    const pageContrastIssuesClean = pageContrastIssues.map(i => ({ loc: i.loc, url: i.url, issue: i.issue, fix: i.fix, fgHex: i.fgHex, bgHex: i.bgHex, ratio: i.ratio, threshold: i.threshold }));
     if (styledEls.length > 0 || pageContrastIssues.length > 0) {
       pf.findings.push({
         checkLabel: 'Color contrast',
@@ -1613,6 +1760,8 @@ function renderResults() {
   } else {
     renderSections();
   }
+
+  showChecklistButton();
 }
 
 // ─── Check-type view ──────────────────────────────────────────────────────────
@@ -1638,7 +1787,7 @@ function renderSections() {
           <span class="chevron" id="chev-${sec.id}">▼</span>
         </div>
       </div>
-      <div class="section-body" id="body-${sec.id}">
+      <div class="section-body" id="body-${sec.id}" style="display:none">
         ${sec.checks.map(c => renderCheck(c)).join('')}
       </div>`;
     body.appendChild(div);
@@ -1663,7 +1812,7 @@ function renderCheck(c) {
   };
   const icon = icons[c.status] || icons.warn;
 
-  const issueHtml = (c.issues||[]).map(i => {
+  const issueHtml = (c.issues||[]).map((i, idx) => {
     // Media file listing rows (no fix text, loc = folder, issue = filename)
     if (i.fix === '' && i.loc && i.issue && !i.issue.includes(' ')) {
       return `<div class="warn-item" style="display:flex;align-items:center;gap:8px;padding:.4rem .8rem">
@@ -1686,18 +1835,43 @@ function renderCheck(c) {
     const locHtml = i.url
       ? `<a href="${escHtml(i.url)}" target="_blank" rel="noopener"
             style="font-size:10.5px;font-weight:600;font-family:var(--font-mono);letter-spacing:.02em;color:var(--c-accent);text-decoration:none;display:inline-flex;align-items:center;gap:3px"
-            title="Open page in Canvas">
+            title="Open page in Canvas"
+            onclick="event.stopPropagation()">
            ${escHtml(i.loc||'')}
            <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1.5 8.5l7-7M8.5 1.5H4M8.5 1.5v4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
          </a>`
       : `<span class="issue-loc">${escHtml(i.loc||'Manual check')}</span>`;
-    return `<div class="${c.status==='fail'?'issue-item':'warn-item'}">
-      ${locHtml}
-      <div class="issue-desc">${i.issue}</div>
-      ${swatchHtml}
-      ${i.fix?`<div class="issue-fix">Suggestion: ${i.fix}</div>`:''}
+    const itemId = i._clId;
+    const isDone = clIsChecked(itemId);
+    return `<div class="${c.status==='fail'?'issue-item':'warn-item'} cl-inline-item${isDone ? ' cl-inline-done' : ''}" id="cli-${itemId}" onclick="clInlineToggle('${itemId}', event)" role="checkbox" aria-checked="${isDone}" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){clInlineToggle('${itemId}', event)}">
+      <div style="display:flex;align-items:flex-start;gap:8px">
+        <div class="cl-inline-check${isDone ? ' cl-inline-checked' : ''}" aria-hidden="true" style="margin-top:2px;flex-shrink:0">
+          ${isDone ? '<svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}
+        </div>
+        <div style="flex:1;min-width:0">
+          ${locHtml}
+          <div class="issue-desc cl-inline-text">${i.issue}</div>
+          ${swatchHtml}
+          ${i.fix?`<div class="issue-fix">Suggestion: ${i.fix}</div>`:''}
+        </div>
+      </div>
     </div>`;
   }).join('');
+
+  // Manual check row (no sub-issues, warn/fail status)
+  let manualCheck = '';
+  if ((c.issues||[]).length === 0 && (c.status === 'fail' || c.status === 'warn')) {
+    const itemId = c._clId;
+    const isDone = clIsChecked(itemId);
+    manualCheck = `<div class="warn-item cl-inline-item${isDone ? ' cl-inline-done' : ''}" id="cli-${itemId}" onclick="clInlineToggle('${itemId}', event)" role="checkbox" aria-checked="${isDone}" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){clInlineToggle('${itemId}', event)}" style="margin-top:.35rem">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="cl-inline-check${isDone ? ' cl-inline-checked' : ''}" aria-hidden="true" style="flex-shrink:0">
+          ${isDone ? '<svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}
+        </div>
+        <span class="cl-inline-text" style="font-size:11.5px;font-style:italic;color:var(--c-ink-muted)">Mark as reviewed</span>
+      </div>
+    </div>`;
+  }
 
   return `<div class="check-item">
     <div class="status-icon">${icon}</div>
@@ -1705,7 +1879,7 @@ function renderCheck(c) {
       <div class="check-title">${c.title}</div>
       ${c.detail?`<div class="check-detail">${c.detail}</div>`:''}
       <div class="check-wcag">${c.wcag}</div>
-      ${issueHtml}
+      ${issueHtml}${manualCheck}
     </div>
   </div>`;
 }
@@ -1839,7 +2013,7 @@ function renderPageBlock(page, pid) {
     ? `<a href="${escHtml(page.pageUrl)}" target="_blank" rel="noopener"
           title="${page.pageType === 'discussion' ? 'Open discussions in Canvas' : 'Open page in Canvas'}"
           onclick="event.stopPropagation()"
-          style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;color:var(--c-accent);text-decoration:none;padding:2px 8px;border-radius:var(--r-sm);border:1px solid rgba(37,99,235,.25);background:var(--c-accent-bg);flex-shrink:0;transition:background .15s"
+          style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;color:#1d4ed8;text-decoration:none;padding:2px 8px;border-radius:var(--r-sm);border:1px solid rgba(37,99,235,.25);background:var(--c-accent-bg);flex-shrink:0;transition:background .15s"
           onmouseover="this.style.background='rgba(37,99,235,.18)'"
           onmouseout="this.style.background='var(--c-accent-bg)'">
          <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 8.5l7-7M8.5 1.5H4M8.5 1.5v4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -1868,23 +2042,47 @@ function renderFinding(f) {
     warn: `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#fef3c7" stroke="#d97706" stroke-width="1.25"/><path d="M9 5.5v4" stroke="#d97706" stroke-width="1.7" stroke-linecap="round"/><circle cx="9" cy="12.5" r=".9" fill="#d97706"/></svg>`,
   };
 
-  const issueHtml = (f.issues || []).map(i => {
-    const swatchHtml = (i.fgHex && i.bgHex)
+  const issueHtml = (f.issues || []).map((iss, idx) => {
+    const swatchHtml = (iss.fgHex && iss.bgHex)
       ? `<div class="contrast-swatch" style="margin-top:3px">
-           <span class="swatch-box" style="background:${i.bgHex}"></span>
+           <span class="swatch-box" style="background:${iss.bgHex}"></span>
            <span style="font-size:9px;color:var(--c-ink-ghost)">BG</span>
-           <span class="swatch-box" style="background:${i.fgHex}"></span>
+           <span class="swatch-box" style="background:${iss.fgHex}"></span>
            <span style="font-size:9px;color:var(--c-ink-ghost)">FG</span>
-           <span class="contrast-ratio-pill">${i.ratio}:1 (need ${i.threshold}:1)</span>
+           <span class="contrast-ratio-pill">${iss.ratio}:1 (need ${iss.threshold}:1)</span>
          </div>`
       : '';
     const cls = f.status === 'fail' ? 'mod-issue-item' : 'mod-warn-item';
-    return `<div class="${cls}">
-      ${escHtml(i.issue)}
-      ${swatchHtml}
-      ${i.fix ? `<div class="fix">Suggestion: ${escHtml(i.fix)}</div>` : ''}
+    const itemId = iss._clId;
+    const isDone = clIsChecked(itemId);
+    return `<div class="${cls} cl-inline-item${isDone ? ' cl-inline-done' : ''}" id="cli-${itemId}" onclick="clInlineToggle('${itemId}', event)" role="checkbox" aria-checked="${isDone}" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){clInlineToggle('${itemId}', event)}">
+      <div style="display:flex;align-items:flex-start;gap:8px">
+        <div class="cl-inline-check${isDone ? ' cl-inline-checked' : ''}" aria-hidden="true">
+          ${isDone ? '<svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}
+        </div>
+        <div style="flex:1;min-width:0">
+          <span class="cl-inline-text">${escHtml(iss.issue)}</span>
+          ${swatchHtml}
+          ${iss.fix ? `<div class="fix">Suggestion: ${escHtml(iss.fix)}</div>` : ''}
+        </div>
+      </div>
     </div>`;
   }).join('');
+
+  // For findings with no sub-issues (manual checks, pass summaries)
+  let manualCheck = '';
+  if ((f.issues || []).length === 0 && (f.status === 'fail' || f.status === 'warn')) {
+    const itemId = f._clId;
+    const isDone = clIsChecked(itemId);
+    manualCheck = `<div class="mod-warn-item cl-inline-item${isDone ? ' cl-inline-done' : ''}" id="cli-${itemId}" onclick="clInlineToggle('${itemId}', event)" role="checkbox" aria-checked="${isDone}" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){clInlineToggle('${itemId}', event)}">
+      <div style="display:flex;align-items:flex-start;gap:8px">
+        <div class="cl-inline-check${isDone ? ' cl-inline-checked' : ''}" aria-hidden="true">
+          ${isDone ? '<svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}
+        </div>
+        <div style="flex:1"><span class="cl-inline-text" style="font-style:italic;color:var(--c-ink-muted)">Mark as reviewed</span></div>
+      </div>
+    </div>`;
+  }
 
   return `<div class="finding-row">
     <div class="finding-label" style="display:flex;align-items:center;gap:4px;padding-top:1px">
@@ -1894,7 +2092,7 @@ function renderFinding(f) {
     <div class="finding-content">
       <div class="finding-title">${escHtml(f.title)}</div>
       <div style="font-size:10px;color:var(--c-ink-ghost);font-family:var(--font-mono);margin-top:1px">${f.wcag}</div>
-      ${issueHtml}
+      ${issueHtml}${manualCheck}
     </div>
   </div>`;
 }
@@ -2331,167 +2529,135 @@ function pdfSafeText(doc, lines, x, y, lineH, maxY) {
   return y;
 }
 
+// ── PDF helpers ───────────────────────────────────────────────────────────────
+function pdfHRule(doc, x, y, w, gray) {
+  const g = gray || 180;
+  doc.setDrawColor(g, g, g);
+  doc.setLineWidth(0.3);
+  doc.line(x, y, x + w, y);
+  doc.setLineWidth(0.2);
+  doc.setDrawColor(0, 0, 0);
+}
+
+// Render an issue block (shared by both views)
+function pdfIssueBlock(doc, issue, cbxX, txtX, innerW, y, lineH, PDF_BOTTOM) {
+  const isMediaRow = issue.fix === '' && issue.loc && !issue.issue.includes(' ');
+  if (isMediaRow) {
+    const nameLines = doc.splitTextToSize(issue.issue, innerW);
+    const locLine   = doc.splitTextToSize(issue.loc + '/', innerW);
+    pdfCheckbox(doc, cbxX, y, false);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(30,30,30);
+    y = pdfSafeText(doc, nameLines, txtX, y, lineH, PDF_BOTTOM);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(110,110,110);
+    y = pdfSafeText(doc, locLine, txtX, y, lineH, PDF_BOTTOM);
+  } else {
+    const locLines  = issue.loc  ? doc.splitTextToSize(issue.loc,  innerW) : [];
+    const descLines = doc.splitTextToSize(issue.issue || '', innerW);
+    const fixLines  = issue.fix  ? doc.splitTextToSize(`Suggestion: ${issue.fix}`, innerW) : [];
+    pdfCheckbox(doc, cbxX, y, false);
+    if (locLines.length > 0) {
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(110,110,110);
+      doc.text(locLines, txtX, y);
+      y += locLines.length * lineH;
+    }
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(30,30,30);
+    doc.text(descLines, txtX, y);
+    y += descLines.length * lineH;
+    if (fixLines.length > 0) {
+      y += 1;
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(7); doc.setTextColor(110,110,110);
+      doc.text(fixLines, txtX, y);
+      y += fixLines.length * lineH;
+    }
+  }
+  y += 2;
+  return y;
+}
+
 // ── PDF: by-module view ───────────────────────────────────────────────────────
 function pdfModuleView(doc, W, M, CW, startY) {
   let y = startY;
   const lineH = 4;
-  const INNER = CW - 16; // text width inside issue block (leaves room for checkbox)
-  const CBX   = M + 6;   // checkbox x
-  const TXT   = M + 11;  // text start after checkbox
+  const INNER = CW - 14;
+  const CBX   = M + 4;
+  const TXT   = M + 9;
+  const sc    = { pass:[22,101,52], fail:[153,27,27], warn:[146,64,14] };
 
-  const keys = sortedModuleKeys(auditData.byModule);
-
-  for (const key of keys) {
+  for (const key of sortedModuleKeys(auditData.byModule)) {
     const pages = sortedModulePages(key, auditData.byModule[key]);
     const isUnattached = key === UNATTACHED_KEY;
-    const displayName = isUnattached ? 'Not attached to a module' : key;
+    const displayName  = isUnattached ? 'Not attached to a module' : key;
     const stats = moduleStats(pages);
 
     if (y > PDF_BOTTOM - 10) { doc.addPage(); y = 20; }
 
-    doc.setFillColor(235, 240, 250);
-    doc.roundedRect(M, y, CW, 9, 1.5, 1.5, 'F');
-    doc.setFont('helvetica','bold');
-    doc.setFontSize(11);
-    doc.setTextColor(15,23,60);
-    doc.text(doc.splitTextToSize(displayName, CW - 50)[0], M+4, y+6.2);
-
+    // ── Module heading ────────────────────────────────────────────────────────
+    pdfHRule(doc, M, y, CW, 80);
+    y += 5;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(30,30,30);
+    const modLines = doc.splitTextToSize(displayName, CW - 45);
+    doc.text(modLines, M, y);
     const statsStr = [
-      stats.fail > 0  ? `${stats.fail} issue${stats.fail>1?'s':''}` : '',
-      stats.warn > 0  ? `${stats.warn} manual` : '',
-      stats.pass > 0  ? `${stats.pass} pass` : '',
+      stats.fail > 0 ? `${stats.fail} issue${stats.fail>1?'s':''}` : '',
+      stats.warn > 0 ? `${stats.warn} manual` : '',
+      stats.pass > 0 ? `${stats.pass} pass` : '',
     ].filter(Boolean).join('  ·  ');
     if (statsStr) {
-      doc.setFont('helvetica','normal');
-      doc.setFontSize(8);
-      doc.setTextColor(80,80,100);
-      doc.text(statsStr, M+CW-2, y+6.2, {align:'right'});
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(110,110,110);
+      doc.text(statsStr, M+CW, y, {align:'right'});
     }
-    y += 12;
+    y += modLines.length * 5 + 1;
+    pdfHRule(doc, M, y, CW, 80);
+    y += 6;
 
     for (const page of pages) {
       if (y > PDF_BOTTOM - 8) { doc.addPage(); y = 20; }
 
+      // ── Page heading ────────────────────────────────────────────────────────
       const pageTypeLabel = page.pageType === 'discussion' ? 'Discussion: ' : 'Page: ';
-      doc.setFillColor(248,249,251);
-      doc.roundedRect(M+2, y, CW-4, 7, 1, 1, 'F');
-      doc.setFont('helvetica','bold');
-      doc.setFontSize(9);
-      doc.setTextColor(30,30,30);
-      doc.text(doc.splitTextToSize(`${pageTypeLabel}${page.pageName}`, CW-10)[0], M+5, y+4.8);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(30,30,30);
+      const pgLines = doc.splitTextToSize(`${pageTypeLabel}${page.pageName}`, CW - (page.pageUrl ? 55 : 4));
+      doc.text(pgLines, M, y);
       if (page.pageUrl) {
-        doc.setFont('helvetica','normal');
-        doc.setFontSize(6.5);
-        doc.setTextColor(37,99,235);
-        doc.text(doc.splitTextToSize(page.pageUrl, CW-10)[0], M+CW-4, y+4.8, {align:'right'});
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(110,110,110);
+        doc.text(doc.splitTextToSize(page.pageUrl, 52)[0], M+CW, y, {align:'right'});
       }
-      y += 9;
+      y += pgLines.length * 4.5 + 2;
 
       for (const f of page.findings) {
         if (y > PDF_BOTTOM - 6) { doc.addPage(); y = 20; }
 
-        const statusLabel = f.status === 'pass' ? 'PASS' : f.status === 'fail' ? 'FAIL' : 'MANUAL';
-        const sc = f.status === 'pass' ? [22,101,52] : f.status === 'fail' ? [153,27,27] : [120,82,12];
+        // Status + check label on one line
+        const sLabel = f.status === 'pass' ? 'PASS' : f.status === 'fail' ? 'FAIL' : 'MANUAL';
+        const sColor = sc[f.status] || sc.warn;
+        if (f.status !== 'pass') pdfCheckbox(doc, CBX, y, false);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...sColor);
+        doc.text(`[${sLabel}]`, TXT, y);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(50,50,50);
+        doc.text(doc.splitTextToSize(f.checkLabel, INNER - 20)[0], TXT+20, y);
+        y += 4;
 
-        // Checkbox for non-pass findings
-        if (f.status !== 'pass') {
-          pdfCheckbox(doc, CBX, y, false);
-        }
+        // WCAG ref
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(140,140,140);
+        doc.text(f.wcag, TXT, y);
+        y += 4;
 
-        doc.setFont('helvetica','bold');
-        doc.setFontSize(7.5);
-        doc.setTextColor(...sc);
-        doc.text(`[${statusLabel}]`, TXT, y);
-        doc.setFont('helvetica','normal');
-        doc.setTextColor(50,50,50);
-        doc.text(doc.splitTextToSize(f.checkLabel, INNER - 22)[0], TXT+18, y);
-        doc.setFont('helvetica','normal');
-        doc.setFontSize(6.5);
-        doc.setTextColor(130,130,130);
-        doc.text(f.wcag, TXT, y+3.5);
-        y += 6;
-
-        if (y > PDF_BOTTOM) { doc.addPage(); y = 20; }
-        doc.setFont('helvetica','normal');
-        doc.setFontSize(7.5);
-        doc.setTextColor(30,30,30);
+        // Summary title
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(60,60,60);
         const titleLines = doc.splitTextToSize(f.title, INNER);
         y = pdfSafeText(doc, titleLines, TXT, y, lineH, PDF_BOTTOM);
+        y += 1;
 
+        // Individual issues
         for (const issue of (f.issues || [])) {
           if (y > PDF_BOTTOM - 6) { doc.addPage(); y = 20; }
-
-          const isMediaRow = issue.fix === '' && issue.loc && !issue.issue.includes(' ');
-          const bgColor = isMediaRow ? [255,251,235] : f.status === 'fail' ? [255,245,245] : [255,251,235];
-
-          if (isMediaRow) {
-            // Media file listing row
-            const nameLines = doc.splitTextToSize(issue.issue, INNER - 4);
-            const locLine   = doc.splitTextToSize(issue.loc + '/', INNER - 4);
-            const blockH    = (nameLines.length + locLine.length) * lineH + 4;
-            if (y + blockH > PDF_BOTTOM) { doc.addPage(); y = 20; }
-            doc.setFillColor(...bgColor);
-            doc.roundedRect(TXT - 1, y - 1, INNER + 2, blockH, 1, 1, 'F');
-            // Checkbox
-            pdfCheckbox(doc, TXT, y + 1.5, false);
-            doc.setFont('helvetica','bold');
-            doc.setFontSize(7.5);
-            doc.setTextColor(30,30,30);
-            y = pdfSafeText(doc, nameLines, TXT + 5, y + 2, lineH, PDF_BOTTOM);
-            doc.setFont('helvetica','normal');
-            doc.setFontSize(7);
-            doc.setTextColor(100,100,100);
-            y = pdfSafeText(doc, locLine, TXT + 5, y, lineH, PDF_BOTTOM);
-            y += 1;
-          } else {
-            // Standard issue row
-            const locLines  = issue.loc  ? doc.splitTextToSize(issue.loc, INNER - 4) : [];
-            const urlLines  = issue.url  ? doc.splitTextToSize(issue.url, INNER - 4) : [];
-            const descLines = doc.splitTextToSize(issue.issue || '', INNER - 4);
-            const fixLines  = issue.fix  ? doc.splitTextToSize(`Suggestion: ${issue.fix}`, INNER - 4) : [];
-            const blockH    = (locLines.length + urlLines.length + descLines.length + fixLines.length) * lineH + (fixLines.length > 0 ? 2 : 0) + 5;
-            if (y + blockH > PDF_BOTTOM) { doc.addPage(); y = 20; }
-            doc.setFillColor(...bgColor);
-            doc.roundedRect(TXT - 1, y - 1, INNER + 2, blockH, 1, 1, 'F');
-            // Checkbox
-            pdfCheckbox(doc, TXT, y + 1.5, false);
-            let ty = y + 2;
-            if (locLines.length > 0) {
-              // Location — normal (not italic), muted color
-              doc.setFont('helvetica','normal');
-              doc.setFontSize(7);
-              doc.setTextColor(90,90,90);
-              doc.text(locLines, TXT + 5, ty);
-              ty += locLines.length * lineH;
-            }
-            if (urlLines.length > 0) {
-              doc.setFont('helvetica','normal');
-              doc.setFontSize(6.5);
-              doc.setTextColor(37,99,235);
-              doc.text(urlLines, TXT + 5, ty);
-              ty += urlLines.length * lineH;
-            }
-            doc.setFont('helvetica','bold');
-            doc.setFontSize(7.5);
-            doc.setTextColor(30,30,30);
-            doc.text(descLines, TXT + 5, ty);
-            ty += descLines.length * lineH;
-            if (fixLines.length > 0) {
-              ty += 1;
-              doc.setFont('helvetica','normal');
-              doc.setFontSize(7);
-              doc.setTextColor(90,90,90);
-              doc.text(fixLines, TXT + 5, ty);
-              ty += fixLines.length * lineH;
-            }
-            y = ty + 2;
-          }
+          y = pdfIssueBlock(doc, issue, CBX, TXT, INNER - 6, y, lineH, PDF_BOTTOM);
         }
         y += 2;
       }
       y += 3;
     }
-    y += 4;
+    y += 5;
   }
 }
 
@@ -2499,125 +2665,201 @@ function pdfModuleView(doc, W, M, CW, startY) {
 function pdfChecksView(doc, W, M, CW, startY) {
   let y = startY;
   const lineH = 4;
-  const INNER = CW - 14; // text width inside issue block
-  const CBX   = M + 4;   // checkbox x
-  const TXT   = M + 9;   // text x after checkbox
+  const INNER = CW - 14;
+  const CBX   = M + 4;
+  const TXT   = M + 9;
+  const sc    = { pass:[22,101,52], fail:[153,27,27], warn:[146,64,14] };
 
   for (const sec of auditData.sections) {
     if (y > PDF_BOTTOM - 8) { doc.addPage(); y = 20; }
-    doc.setFillColor(245,245,245);
-    doc.roundedRect(M, y, CW, 7, 1, 1, 'F');
-    doc.setFont('helvetica','bold');
-    doc.setFontSize(10);
-    doc.setTextColor(30,30,30);
-    doc.text(doc.splitTextToSize(sec.label, CW - 4)[0], M+3, y+5);
-    y += 10;
+
+    // ── Section heading ───────────────────────────────────────────────────────
+    pdfHRule(doc, M, y, CW, 80);
+    y += 5;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(30,30,30);
+    const secLines = doc.splitTextToSize(sec.label, CW - 4);
+    doc.text(secLines, M, y);
+    y += secLines.length * 5 + 1;
+    pdfHRule(doc, M, y, CW, 80);
+    y += 6;
 
     for (const c of sec.checks) {
       if (y > PDF_BOTTOM - 6) { doc.addPage(); y = 20; }
-      const statusLabel = c.status==='pass'?'PASS':c.status==='fail'?'FAIL':'MANUAL';
-      const sc = c.status==='pass'?[22,101,52]:c.status==='fail'?[153,27,27]:[120,82,12];
 
-      // Checkbox for non-pass checks
-      if (c.status !== 'pass') {
-        pdfCheckbox(doc, CBX, y, false);
-      }
-
-      doc.setFont('helvetica','bold');
-      doc.setFontSize(8);
-      doc.setTextColor(...sc);
-      doc.text(`[${statusLabel}]`, TXT, y);
-      doc.setFont('helvetica','normal');
-      doc.setTextColor(30,30,30);
-      const titleLines = doc.splitTextToSize(c.title, INNER - 22);
-      doc.text(titleLines, TXT + 18, y);
+      const sLabel = c.status==='pass'?'PASS':c.status==='fail'?'FAIL':'MANUAL';
+      const sColor = sc[c.status] || sc.warn;
+      if (c.status !== 'pass') pdfCheckbox(doc, CBX, y, false);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...sColor);
+      doc.text(`[${sLabel}]`, TXT, y);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(30,30,30);
+      const titleLines = doc.splitTextToSize(c.title, INNER - 20);
+      doc.text(titleLines, TXT+20, y);
       y += titleLines.length * 4.5;
 
       if (c.detail) {
         if (y > PDF_BOTTOM) { doc.addPage(); y = 20; }
-        doc.setFontSize(7.5);
-        doc.setTextColor(80,80,80);
-        const dl = doc.splitTextToSize(c.detail, INNER);
-        y = pdfSafeText(doc, dl, TXT, y, lineH, PDF_BOTTOM);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(80,80,80);
+        y = pdfSafeText(doc, doc.splitTextToSize(c.detail, INNER), TXT, y, lineH, PDF_BOTTOM);
         y += 1;
       }
-      if (y > PDF_BOTTOM) { doc.addPage(); y = 20; }
-      doc.setFontSize(7);
-      doc.setTextColor(130,130,130);
+
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(140,140,140);
       doc.text(c.wcag, TXT, y);
       y += 5;
 
       for (const issue of (c.issues||[])) {
         if (y > PDF_BOTTOM - 6) { doc.addPage(); y = 20; }
-
-        const isMediaRow = issue.fix === '' && issue.loc && !issue.issue.includes(' ');
-        const bgFail = c.status === 'fail';
-
-        if (isMediaRow) {
-          // Media file listing
-          const nameLines = doc.splitTextToSize(issue.issue, INNER - 4);
-          const locLine   = doc.splitTextToSize(issue.loc + '/', INNER - 4);
-          const blockH    = (nameLines.length + locLine.length) * lineH + 4;
-          if (y + blockH > PDF_BOTTOM) { doc.addPage(); y = 20; }
-          doc.setFillColor(255,251,235);
-          doc.roundedRect(CBX - 1, y - 1, CW - CBX + M + 2, blockH, 1, 1, 'F');
-          pdfCheckbox(doc, CBX, y + 1.5, false);
-          doc.setFont('helvetica','bold');
-          doc.setFontSize(7.5);
-          doc.setTextColor(30,30,30);
-          y = pdfSafeText(doc, nameLines, CBX + 5, y + 2, lineH, PDF_BOTTOM);
-          doc.setFont('helvetica','normal');
-          doc.setFontSize(7);
-          doc.setTextColor(100,100,100);
-          y = pdfSafeText(doc, locLine, CBX + 5, y, lineH, PDF_BOTTOM);
-          y += 2;
-        } else {
-          // Standard issue
-          const locLines  = issue.loc  ? doc.splitTextToSize(issue.loc, INNER - 4) : [];
-          const urlLines  = issue.url  ? doc.splitTextToSize(issue.url, INNER - 4) : [];
-          const descLines = doc.splitTextToSize(issue.issue || '', INNER - 4);
-          const fixLines  = issue.fix  ? doc.splitTextToSize(`Suggestion: ${issue.fix}`, INNER - 4) : [];
-          const blockH    = (locLines.length + urlLines.length + descLines.length + fixLines.length) * lineH + (fixLines.length > 0 ? 2 : 0) + 5;
-          if (y + blockH > PDF_BOTTOM) { doc.addPage(); y = 20; }
-          doc.setFillColor(bgFail ? 255 : 255, bgFail ? 245 : 251, bgFail ? 245 : 235);
-          doc.roundedRect(CBX - 1, y - 1, CW - CBX + M + 2, blockH, 1, 1, 'F');
-          // Checkbox
-          pdfCheckbox(doc, CBX, y + 1.5, false);
-          let ty = y + 2;
-          if (locLines.length > 0) {
-            // Location — normal weight, not italic, muted
-            doc.setFont('helvetica','normal');
-            doc.setFontSize(7);
-            doc.setTextColor(90,90,90);
-            doc.text(locLines, CBX + 5, ty);
-            ty += locLines.length * lineH;
-          }
-          if (urlLines.length > 0) {
-            doc.setFont('helvetica','normal');
-            doc.setFontSize(6.5);
-            doc.setTextColor(37,99,235);
-            doc.text(urlLines, CBX + 5, ty);
-            ty += urlLines.length * lineH;
-          }
-          doc.setFont('helvetica','bold');
-          doc.setFontSize(7.5);
-          doc.setTextColor(30,30,30);
-          doc.text(descLines, CBX + 5, ty);
-          ty += descLines.length * lineH;
-          if (fixLines.length > 0) {
-            ty += 1;
-            doc.setFont('helvetica','normal');
-            doc.setFontSize(7);
-            doc.setTextColor(90,90,90);
-            doc.text(fixLines, CBX + 5, ty);
-            ty += fixLines.length * lineH;
-          }
-          y = ty + 3;
-        }
+        y = pdfIssueBlock(doc, issue, CBX, TXT, INNER - 6, y, lineH, PDF_BOTTOM);
       }
       y += 2;
     }
-    y += 3;
+    y += 4;
   }
 }
+// ─── Inline Fix Checklist ────────────────────────────────────────────────────
+// Simple key→done map; items identified by a stable hash of label+issue+index
+const clChecked = {};  // id → boolean
+let clTotalItems = 0;
+
+function clMakeId(context, issue, idx) {
+  // Unique per item: context (page+check or section+check) + issue text + position
+  return btoa(encodeURIComponent(`${context}|${issue}|${idx}`)).replace(/[^a-zA-Z0-9]/g, '').slice(0, 40);
+}
+
+function clIsChecked(id) {
+  return !!clChecked[id];
+}
+
+function clInlineToggle(id, event) {
+  if (event) event.stopPropagation();
+  clChecked[id] = !clChecked[id];
+  // Update ALL elements with this id (both views may be in DOM simultaneously)
+  document.querySelectorAll('[id="cli-' + id + '"]').forEach(el => {
+    const isDone = clChecked[id];
+    el.classList.toggle('cl-inline-done', isDone);
+    el.setAttribute('aria-checked', isDone);
+    const box = el.querySelector('.cl-inline-check');
+    if (box) {
+      box.classList.toggle('cl-inline-checked', isDone);
+      box.innerHTML = isDone
+        ? '<svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+        : '';
+    }
+  });
+  clUpdateProgress();
+}
+
+function clCountItems() {
+  return document.querySelectorAll('.cl-inline-item').length;
+}
+
+function clUpdateProgress() {
+  // Deduplicate by id so items present in both views only count once
+  const seen = new Set();
+  let total = 0, doneCount = 0;
+  document.querySelectorAll('.cl-inline-item').forEach(el => {
+    if (seen.has(el.id)) return;
+    seen.add(el.id);
+    total++;
+    if (el.classList.contains('cl-inline-done')) doneCount++;
+  });
+  const pct = total ? Math.round(doneCount / total * 100) : 0;
+
+  const bar = document.getElementById('inline-cl-bar');
+  const fill = document.getElementById('inline-cl-bar-fill');
+  const label = document.getElementById('inline-cl-label');
+  if (!bar) return;
+
+  if (total > 0) {
+    bar.style.display = 'block';
+    fill.style.width = pct + '%';
+    fill.style.background = pct === 100 ? 'var(--c-pass)' : 'var(--c-accent)';
+    label.textContent = `${doneCount} of ${total} fixed`;
+    label.style.color = pct === 100 ? '#11813a' : '#1d4ed8';
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+function clClearAll() {
+  Object.keys(clChecked).forEach(k => { clChecked[k] = false; });
+  // Clear all instances in both views
+  document.querySelectorAll('.cl-inline-item').forEach(el => {
+    el.classList.remove('cl-inline-done');
+    el.setAttribute('aria-checked', 'false');
+    const box = el.querySelector('.cl-inline-check');
+    if (box) { box.classList.remove('cl-inline-checked'); box.innerHTML = ''; }
+  });
+  clUpdateProgress();
+}
+
+function expandIssues() {
+  const btn = document.getElementById('expand-issues-btn');
+  const label = document.getElementById('expand-issues-label');
+  const icon = document.getElementById('expand-issues-icon');
+  const isExpanded = btn.dataset.expanded === 'true';
+
+  // Collapse SVG (chevron up)
+  const collapseSvg = '<path d="M2 8.5l4.5-4.5 4.5 4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 12V4M2 3.5h9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>';
+  // Expand SVG (chevron down)
+  const expandSvg  = '<path d="M2 4.5l4.5 4.5 4.5-4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 1v8M2 9.5h9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>';
+
+  if (!isExpanded) {
+    // Expand all accordions that contain an unchecked issue
+    document.querySelectorAll('.page-body, .module-pages, .section-body').forEach(body => {
+      const hasIssue = body.querySelector('.cl-inline-item:not(.cl-inline-done)');
+      if (hasIssue) {
+        body.style.display = '';
+        const id = body.id.replace(/^body-/, '');
+        const chev = document.getElementById('chev-' + id);
+        if (chev) chev.classList.remove('open');
+      }
+    });
+    btn.dataset.expanded = 'true';
+    label.textContent = 'Collapse all';
+    icon.innerHTML = collapseSvg;
+  } else {
+    // Collapse all accordions
+    document.querySelectorAll('.page-body, .module-pages, .section-body').forEach(body => {
+      body.style.display = 'none';
+      const id = body.id.replace(/^body-/, '');
+      const chev = document.getElementById('chev-' + id);
+      if (chev) chev.classList.add('open');
+    });
+    btn.dataset.expanded = 'false';
+    label.textContent = 'Expand all with issues';
+    icon.innerHTML = expandSvg;
+  }
+}
+
+function showChecklistButton() {
+  // Show/hide the expand button depending on whether there are any open issues
+  const expandBtn = document.getElementById('expand-issues-btn');
+  if (expandBtn) {
+    expandBtn.style.display = 'inline-flex';
+    expandBtn.dataset.expanded = 'false';
+    const lbl = document.getElementById('expand-issues-label');
+    const ico = document.getElementById('expand-issues-icon');
+    if (lbl) lbl.textContent = 'Expand all with issues';
+    if (ico) ico.innerHTML = '<path d="M2 4.5l4.5 4.5 4.5-4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 1v8M2 9.5h9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>';
+  }
+
+  // Re-apply any existing checked states after a view re-render, then update progress
+  setTimeout(() => {
+    Object.entries(clChecked).forEach(([id, done]) => {
+      if (!done) return;
+      document.querySelectorAll('[id="cli-' + id + '"]').forEach(el => {
+        el.classList.add('cl-inline-done');
+        el.setAttribute('aria-checked', 'true');
+        const box = el.querySelector('.cl-inline-check');
+        if (box) {
+          box.classList.add('cl-inline-checked');
+          box.innerHTML = '<svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        }
+      });
+    });
+    clUpdateProgress();
+  }, 50);
+}
+
 </script>

@@ -132,7 +132,7 @@ body{
   font-size: 15px;
   font-weight: 600;
   color: var(--c-ink);
-  margin-bottom: .4rem;
+  margin-bottom: .15rem;
   letter-spacing: -.2px;
 }
 .upload-zone p{font-size: 13px; color: var(--c-ink-muted); font-weight:300}
@@ -686,10 +686,12 @@ body{
   <div id="upload-area">
     <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
       <div class="upload-icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="var(--color-text-secondary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="var(--c-ink-muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
-      <h2>Drop your Canvas export here</h2>
-      <b>or click to browse</b>
+      <div style="margin-bottom:.75rem">
+        <h2 style="margin-bottom:.2rem">Drop your Canvas export here</h2>
+        <b>or click to browse</b>
+      </div>
       <p>Accepts .imscc or .zip files exported from Canvas</p>
       <input type="file" id="file-input" accept=".imscc,.zip">
     </div>

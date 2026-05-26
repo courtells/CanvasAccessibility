@@ -714,6 +714,33 @@ body{
   </div>
 
   <div id="upload-area">
+
+    <!-- ── Explainer ─────────────────────────────────────────────────────────── -->
+    <div style="margin-bottom:1.5rem">
+      <p style="font-size:14px;color:var(--c-ink-soft);line-height:1.7;margin-bottom:1.1rem">
+        This tool checks your Canvas course for common accessibility issues and tells you exactly how to fix them — no technical background required. Upload your course export file below and you'll get a page-by-page report in seconds.
+      </p>
+
+      <details style="background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--r-lg);overflow:hidden">
+        <summary style="padding:.8rem 1.1rem;font-size:14px;font-weight:500;color:var(--c-ink);cursor:pointer;user-select:none;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <span>How to export your course from Canvas</span>
+          <svg class="details-chevron" width="14" height="14" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;transition:transform .2s"><path d="M2 4.5l5 5 5-5" stroke="var(--c-ink-ghost)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </summary>
+        <div style="padding:.1rem 1.1rem 1rem;border-top:1px solid var(--c-border)">
+          <ol style="margin:.75rem 0 0 1.1rem;display:flex;flex-direction:column;gap:.55rem">
+            <li style="font-size:13.5px;color:var(--c-ink-soft);line-height:1.6">Open your course in Canvas and go to <strong>Settings</strong> (bottom of the left-hand navigation).</li>
+            <li style="font-size:13.5px;color:var(--c-ink-soft);line-height:1.6">Click <strong>Export Course Content</strong> in the right-hand sidebar.</li>
+            <li style="font-size:13.5px;color:var(--c-ink-soft);line-height:1.6">Select <strong>Course</strong> as the export type, then click <strong>Create Export</strong>.</li>
+            <li style="font-size:13.5px;color:var(--c-ink-soft);line-height:1.6">Wait for Canvas to prepare the file — this usually takes less than a minute. A download link will appear when it's ready.</li>
+            <li style="font-size:13.5px;color:var(--c-ink-soft);line-height:1.6">Download the <strong>.imscc</strong> file and upload it below.</li>
+          </ol>
+          <p style="font-size:12.5px;color:var(--c-ink-ghost);margin-top:.85rem;line-height:1.6">
+            The exported file stays in your browser — nothing is uploaded to a server or shared with anyone.
+          </p>
+        </div>
+      </details>
+    </div>
+
     <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
       <div class="upload-icon">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="var(--c-ink-muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -856,6 +883,16 @@ body{
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
+// Rotate the export-instructions chevron when the <details> element opens/closes.
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('details').forEach(el => {
+    el.addEventListener('toggle', () => {
+      const chev = el.querySelector('.details-chevron');
+      if (chev) chev.style.transform = el.open ? 'rotate(180deg)' : 'rotate(0deg)';
+    });
+  });
+});
+
 // =============================================================================
 // Canvas Accessibility Checker
 // Audits exported Canvas course shells (.imscc/.zip) for WCAG 2.1 AA issues.

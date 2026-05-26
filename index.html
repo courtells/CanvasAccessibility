@@ -502,8 +502,6 @@ body{
   border-bottom: 1px solid var(--c-border);
 }
 .check-item:last-child{border-bottom: none}
-.status-dot{ display: none; }
-
 .check-title{
   font-size:14px;
   font-weight: 500;
@@ -636,23 +634,7 @@ body{
 
 /* ── Actions ──────────────────────────────────────────────────────────────── */
 .actions{display: flex; gap: 8px; margin-top: 1.25rem; flex-wrap: wrap}
-.cl-tab{font-size:12.5px;padding:4px 12px;border-radius:100px;border:1px solid var(--c-border-strong);background:transparent;cursor:pointer;font-family:var(--font-body);color:var(--c-ink-muted);transition:all .12s;white-space:nowrap}
-.cl-tab.active{background:var(--c-ink);color:white;border-color:var(--c-ink)}
-.cl-tab:hover:not(.active){background:var(--c-surface-2)}
-.cl-item{display:flex;align-items:flex-start;gap:10px;padding:.65rem .75rem;border-radius:var(--r-md);border:1px solid var(--c-border);background:var(--c-surface);margin-bottom:.5rem;transition:all .2s;cursor:pointer}
-.cl-item:hover{background:var(--c-surface-2)}
-.cl-item.done{opacity:.55;background:var(--c-surface-2)}
-.cl-item.done .cl-item-title{text-decoration:line-through;color:var(--c-ink-ghost)}
-.cl-checkbox{width:17px;height:17px;border-radius:4px;border:1.5px solid var(--c-border-strong);flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .15s;background:white}
-.cl-item.done .cl-checkbox{background:var(--c-pass);border-color:var(--c-pass)}
-.cl-item-body{flex:1;min-width:0}
-.cl-item-title{font-size:13.5px;font-weight:500;color:var(--c-ink);line-height:1.4;margin-bottom:2px}
-.cl-item-meta{font-size:12px;color:var(--c-ink-ghost);display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:3px}
-.cl-item-fix{font-size:12px;color:var(--c-ink-muted);line-height:1.4;font-style:italic}
-.cl-severity{font-size:11px;font-weight:600;padding:1px 6px;border-radius:100px}
-.cl-severity.fail{background:var(--c-fail-bg);color:#b91c1c}
-.cl-severity.warn{background:var(--c-warn-bg);color:#92400e}
-.cl-empty{text-align:center;padding:2.5rem 1rem;color:var(--c-ink-ghost);font-size:14px}
+
 
 /* ── Visibility ───────────────────────────────────────────────────────────── */
 #results{display:none}
@@ -862,8 +844,6 @@ body{
 </div>
 
 
-
-
 <!-- ── Confirm-reset modal ──────────────────────────────────────────────────── -->
 <div id="confirm-modal-overlay" onclick="closeConfirmModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:950;animation:fadeIn .15s ease"></div>
 <div id="confirm-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-54%);background:white;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.18);z-index:951;width:min(380px,90vw);padding:1.5rem 1.5rem 1.25rem;animation:fadeUp .2s ease">
@@ -886,15 +866,27 @@ body{
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-let auditData = null;
-let fileObj = null;
-let canvasBaseUrl = ''; // optional Canvas course URL for direct page links
-let currentFilter = 'all';
-let currentView = 'modules'; // 'checks' or 'modules'
+// =============================================================================
+// Canvas Accessibility Checker
+// Audits exported Canvas course shells (.imscc/.zip) for WCAG 2.1 AA issues.
+//
+// Structure:
+//   State & file handling  →  audit runner  →  manifest/page parsing
+//   →  contrast engine  →  main audit  →  rendering (module + check views)
+//   →  PDF export  →  spreadsheet export  →  inline fix checklist
+// =============================================================================
+
+// ── Global state ──────────────────────────────────────────────────────────────
+let auditData    = null;  // Parsed audit results, set after performAudit() resolves
+let fileObj      = null;  // The uploaded File object
+let canvasBaseUrl = '';   // Optional base URL entered by faculty; enables direct page links
+let currentFilter = 'all';       // Active filter: 'all' | 'fail' | 'warn' | 'pass'
+let currentView   = 'modules';   // Active view: 'modules' | 'checks'
 
 // Derive a Canvas page URL from the exported file path and the user-supplied base URL.
 // HTML pages use /pages/slug; discussion XML files use /discussion_topics/ (no reliable
 // slug in export so we link to the discussion index and note the title).
+// Builds a direct Canvas page URL from the course base URL, a file path, and page type.
 function pageUrl(path, type) {
   if (!canvasBaseUrl) return '';
   try {
@@ -909,7 +901,7 @@ function pageUrl(path, type) {
   } catch(e) { return ''; }
 }
 
-// ─── File handling ────────────────────────────────────────────────────────────
+// ── File handling ────────────────────────────────────────────────────────────
 const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
 
@@ -922,6 +914,7 @@ dropZone.addEventListener('drop', e => {
 });
 fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
 
+// Called when a file is selected via the file picker or drag-and-drop.
 function handleFile(f) {
   fileObj = f;
   document.getElementById('file-name').textContent = f.name;
@@ -958,13 +951,15 @@ function resetTool() {
   fileInput.value = '';
 }
 
+// Updates the upload/audit progress bar (0–100) and its status label.
 function setProgress(pct, label) {
   document.getElementById('progress-bar').style.width = pct + '%';
   document.getElementById('progress-pct').textContent = pct + '%';
   document.getElementById('progress-label').textContent = label;
 }
 
-// ─── View switching ───────────────────────────────────────────────────────────
+// ── View switching ───────────────────────────────────────────────────────────
+// Switches between the "By Module" and "By Check Type" result views and re-renders.
 function setView(v) {
   currentView = v;
   document.getElementById('view-checks-btn').classList.toggle('active', v === 'checks');
@@ -972,7 +967,7 @@ function setView(v) {
   renderResults();
 }
 
-// ─── Audit runner ─────────────────────────────────────────────────────────────
+// ── Audit runner ─────────────────────────────────────────────────────────────
 async function runAudit() {
   if (!fileObj) return;
   canvasBaseUrl = (document.getElementById('canvas-url-input').value || '').trim();
@@ -1057,7 +1052,11 @@ async function getFile(zip, name) {
   return await f.async('string');
 }
 
-// ─── Manifest parsing ─────────────────────────────────────────────────────────
+// ── Manifest parsing ─────────────────────────────────────────────────────────
+// Parses the imsmanifest.xml to extract:
+//   pageMap    — maps resource identifiers to their HTML file paths
+//   moduleOrder — ordered list of module titles from the manifest
+//   pageOrder   — per-module ordered list of page titles
 function parseManifest(xmlDoc) {
   const empty = { pageMap: {}, moduleOrder: [], pageOrder: {}, hasManifest: false };
   if (!xmlDoc) return empty;
@@ -1191,21 +1190,23 @@ async function extractPages(zip, pageMap) {
   return pages;
 }
 
+// Fallback module name when a page isn't found in the manifest; uses the first path segment.
 function inferModule(path) {
   const parts = path.split('/');
   if (parts.length > 1) return parts[0];
   return 'Root';
 }
 
-// ─── Link text helpers ────────────────────────────────────────────────────────
+// ── Link text helpers ────────────────────────────────────────────────────────
 // Returns true if the visible link text is a bare URL (but not an email address)
+// Returns true if the string looks like a raw URL (used to flag links with URL-as-label).
 function looksLikeUrl(txt) {
   if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(txt)) return false; // email address — allowed
   return /^(https?:\/\/|www\.)\S+/i.test(txt) ||
          /^\S+\.(com|org|edu|gov|net|io)(\/\S*)?$/i.test(txt);
 }
 
-// ─── Color contrast engine ────────────────────────────────────────────────────
+// ── Color contrast engine ────────────────────────────────────────────────────
 const CSS_NAMED_COLORS = {
   aliceblue:'#f0f8ff',antiquewhite:'#faebd7',aqua:'#00ffff',aquamarine:'#7fffd4',
   azure:'#f0ffff',beige:'#f5f5dc',bisque:'#ffe4c4',black:'#000000',blanchedalmond:'#ffebcd',
@@ -1243,6 +1244,7 @@ const CSS_NAMED_COLORS = {
   yellowgreen:'#9acd32'
 };
 
+// Converts a CSS color string (hex, rgb(), rgba(), or named color) to {r,g,b} in 0–255.
 function parseCssColor(raw) {
   if (!raw) return null;
   const s = raw.trim().toLowerCase();
@@ -1264,10 +1266,12 @@ function linearize(c) {
   return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
 }
 
+// Calculates WCAG relative luminance for an {r,g,b} object (values 0–255).
 function relativeLuminance({ r, g, b }) {
   return 0.2126 * linearize(r) + 0.7152 * linearize(g) + 0.0722 * linearize(b);
 }
 
+// Returns the WCAG contrast ratio between two {r,g,b} colors.
 function contrastRatio(fg, bg) {
   const L1 = relativeLuminance(fg);
   const L2 = relativeLuminance(bg);
@@ -1311,6 +1315,9 @@ function resolveBackground(el) {
   return { r: 255, g: 255, b: 255 };
 }
 
+// Scans a parsed HTML document for inline-styled text and checks each element's
+// foreground/background contrast ratio against WCAG 1.4.3 thresholds (4.5:1 normal, 3:1 large).
+// Returns an array of issue objects for any elements that fail.
 function checkPageContrast(doc, loc, url) {
   const issues = [];
   const TEXT_TAGS = 'p,span,div,td,th,li,h1,h2,h3,h4,h5,h6,a,strong,em,b,i,label,caption,blockquote,pre,code,small,mark,s,del,ins';
@@ -1347,7 +1354,8 @@ function checkPageContrast(doc, loc, url) {
   return issues;
 }
 
-// ─── Main audit ───────────────────────────────────────────────────────────────
+// ── Main audit ───────────────────────────────────────────────────────────────
+// Sentinel key for pages that exist in the export but aren't linked to any module.
 const UNATTACHED_KEY = '__unattached__';
 
 async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOrder = [], pageOrder = {}) {
@@ -1736,20 +1744,7 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOr
   return results;
 }
 
-// ─── Count helpers ────────────────────────────────────────────────────────────
-function countByStatus(s) {
-  let pass=0,fail=0,warn=0;
-  for (const sec of s.sections) {
-    for (const chk of sec.checks) {
-      if (chk.status==='pass') pass++;
-      else if (chk.status==='fail') fail++;
-      else warn++;
-    }
-  }
-  return {pass,fail,warn};
-}
-
-// ─── Filter ───────────────────────────────────────────────────────────────────
+// ── Filter ───────────────────────────────────────────────────────────────────
 function filterResults(f, btn) {
   currentFilter = f;
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -1757,7 +1752,7 @@ function filterResults(f, btn) {
   if (auditData) renderSections();
 }
 
-// ─── Render dispatcher ────────────────────────────────────────────────────────
+// ── Render dispatcher ────────────────────────────────────────────────────────
 function renderResults() {
   document.getElementById('upload-area').style.display = 'none';
   document.getElementById('results').style.display = 'block';
@@ -1771,7 +1766,7 @@ function renderResults() {
   showChecklistButton();
 }
 
-// ─── Check-type view ──────────────────────────────────────────────────────────
+// ── Check-type view ──────────────────────────────────────────────────────────
 function renderSections() {
   const body = document.getElementById('results-body');
   body.innerHTML = '';
@@ -1899,7 +1894,7 @@ function toggleSection(id) {
   chev.classList.toggle('open', !hidden);
 }
 
-// ─── Module view ──────────────────────────────────────────────────────────────
+// ── Module view ──────────────────────────────────────────────────────────────
 // Sort module keys using the manifest order, with UNATTACHED_KEY always last.
 // Falls back to alphabetical for any module not found in the manifest order.
 function sortedModuleKeys(byModule) {
@@ -2120,11 +2115,12 @@ function togglePage(id) {
   chev.classList.toggle('open', !hidden);
 }
 
+// Escapes a string for safe insertion into HTML attribute values and text content.
 function escHtml(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ─── PDF export ───────────────────────────────────────────────────────────────
+// ── PDF export ───────────────────────────────────────────────────────────────
 function downloadPDF() {
   const {jsPDF} = window.jspdf;
   const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
@@ -2161,7 +2157,7 @@ function downloadPDF() {
   doc.save(`canvas-accessibility-audit-${new Date().toISOString().slice(0,10)}.pdf`);
 }
 
-// ─── Spreadsheet export ───────────────────────────────────────────────────────
+// ── Spreadsheet export ───────────────────────────────────────────────────────
 function downloadSpreadsheet() {
   if (!auditData || !window.XLSX) return;
   const wb = XLSX.utils.book_new();
@@ -2537,6 +2533,7 @@ function pdfSafeText(doc, lines, x, y, lineH, maxY) {
 }
 
 // ── PDF helpers ───────────────────────────────────────────────────────────────
+// Draws a horizontal rule in the PDF at (x, y) with width w. Gray: 0 (black) – 255 (white).
 function pdfHRule(doc, x, y, w, gray) {
   const g = gray || 180;
   doc.setDrawColor(g, g, g);
@@ -2547,6 +2544,9 @@ function pdfHRule(doc, x, y, w, gray) {
 }
 
 // Render an issue block (shared by both views)
+// Renders a single issue row in the PDF: checkbox, location, description, and fix suggestion.
+// Used by both pdfModuleView and pdfChecksView to keep formatting consistent.
+// Returns the updated y position after rendering.
 function pdfIssueBlock(doc, issue, cbxX, txtX, innerW, y, lineH, PDF_BOTTOM) {
   const isMediaRow = issue.fix === '' && issue.loc && !issue.issue.includes(' ');
   if (isMediaRow) {
@@ -2723,20 +2723,18 @@ function pdfChecksView(doc, W, M, CW, startY) {
     y += 4;
   }
 }
-// ─── Inline Fix Checklist ────────────────────────────────────────────────────
+// ── Inline Fix Checklist ────────────────────────────────────────────────────
 // Simple key→done map; items identified by a stable hash of label+issue+index
 const clChecked = {};  // id → boolean
 let clTotalItems = 0;
 
-function clMakeId(context, issue, idx) {
-  // Unique per item: context (page+check or section+check) + issue text + position
-  return btoa(encodeURIComponent(`${context}|${issue}|${idx}`)).replace(/[^a-zA-Z0-9]/g, '').slice(0, 40);
-}
-
+// Returns true if the checklist item with this _clId has been marked as fixed.
 function clIsChecked(id) {
   return !!clChecked[id];
 }
 
+// Toggles a single checklist item's done state, updates every matching DOM element
+// (both views may render the same item simultaneously), then refreshes the progress bar.
 function clInlineToggle(id, event) {
   if (event) event.stopPropagation();
   clChecked[id] = !clChecked[id];
@@ -2756,10 +2754,9 @@ function clInlineToggle(id, event) {
   clUpdateProgress();
 }
 
-function clCountItems() {
-  return document.querySelectorAll('.cl-inline-item').length;
-}
-
+// Recalculates and renders the fix-progress bar.
+// Uses clTotalItems (stamped at audit time) as the denominator so the count stays
+// consistent regardless of which view is currently rendered or which accordions are open.
 function clUpdateProgress() {
   // Use the stamped total (set at audit time) so count is accurate in both views
   const total     = clTotalItems;
@@ -2794,6 +2791,8 @@ function clClearAll() {
   clUpdateProgress();
 }
 
+// Toggles all result accordions that contain at least one unfixed issue.
+// First click expands them all; second click collapses them all.
 function expandIssues() {
   const btn = document.getElementById('expand-issues-btn');
   const label = document.getElementById('expand-issues-label');
@@ -2833,6 +2832,9 @@ function expandIssues() {
   }
 }
 
+// Called at the end of every renderResults() run. Shows the expand-issues button,
+// then re-applies any persisted checked states to the freshly-rendered DOM items,
+// and finally refreshes the progress bar totals.
 function showChecklistButton() {
   // Show/hide the expand button depending on whether there are any open issues
   const expandBtn = document.getElementById('expand-issues-btn');

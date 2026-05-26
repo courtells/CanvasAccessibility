@@ -1,0 +1,56 @@
+# AI Use Declaration
+
+This project was built collaboratively with Claude, an AI assistant made by Anthropic. This declaration explains what that means in practice, so anyone using, reviewing, or building on this tool understands how it came to be.
+
+---
+
+## What "collaborative" means here
+
+This wasn't a case of typing a single prompt and accepting whatever came out. The tool was developed through an extended, iterative conversation — more like pair programming than delegation. Across that process:
+
+- **I defined the purpose and scope.** The idea of a browser-based, no-setup accessibility checker for Canvas faculty came from my work in instructional design. I identified the need, chose which WCAG criteria to include, and decided how the tool should feel for a non-technical audience.
+- **I made every design decision.** Choices about layout, the two-view structure, the inline checklist, the tone of fix suggestions, what goes in the PDF versus the spreadsheet, and how results should be organised — all of those were driven by my judgment and refined through feedback I gave along the way.
+- **The AI contributed technical implementation.** Claude wrote the HTML, CSS, and JavaScript, suggested approaches to problems I raised, and caught issues I hadn't thought of. When something wasn't working or didn't feel right, I described what I wanted and we worked through it together.
+- **I reviewed every change.** Nothing was accepted without my seeing it first. I tested the tool, identified problems, and directed revisions throughout.
+
+The result reflects both of our contributions — I couldn't have built this alone, and the AI couldn't have built it without the direction, domain knowledge, and judgment I brought to the process.
+
+---
+
+## What the AI did
+
+- Wrote all HTML, CSS, and JavaScript code
+- Suggested the data structures used to organise audit results
+- Implemented the WCAG contrast ratio calculations
+- Helped debug issues as they came up
+- Drafted and revised the fix suggestion text (which I then reviewed and shaped for a faculty audience)
+- Wrote the initial README and this declaration
+
+---
+
+## What I did
+
+- Identified the need for the tool and defined its requirements
+- Chose which accessibility checks to include and how to present them
+- Made all UX and design decisions
+- Directed the language and tone throughout, particularly for faculty-facing content
+- Tested the tool against real Canvas exports and reported issues
+- Reviewed, approved, or rejected every change
+- Took responsibility for the final product
+
+---
+
+## Why I'm disclosing this
+
+Transparency about AI use matters — especially in educational and accessibility contexts, where trust in tools and honest representation of work are important values. This declaration isn't required by any policy; I'm including it because I think it's the right thing to do, and because I'd want to know this information if I were evaluating someone else's tool.
+
+AI-assisted work requires a different kind of accountability — one where the human is responsible not just for what the AI produced, but for the judgment calls that shaped it.
+
+---
+
+## Tool and model
+
+**AI assistant:** Claude (Anthropic)
+**Interface:** Claude.ai
+**Model:** Claude Sonnet 4.5 (approximate; exact version not logged)
+**Period of development:** 2025–2026

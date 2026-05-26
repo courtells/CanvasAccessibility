@@ -728,10 +728,10 @@ body{
         </summary>
         <div style="padding:.1rem 1.1rem 1rem;border-top:1px solid var(--c-border)">
           <ol style="margin:.75rem 0 0 1.1rem;display:flex;flex-direction:column;gap:.55rem">
-            <li style="font-size:13.5px;color:var(--c-ink-soft);line-height:1.6">Open your course in Canvas and go to <strong>Settings</strong> (bottom of the left-hand navigation).</li>
+            <li style="font-size:13.5px;color:var(--c-ink-soft);line-height:1.6">Open your course in Canvas and go to <strong>Settings</strong> (bottom of the left-hand navigation pane).</li>
             <li style="font-size:13.5px;color:var(--c-ink-soft);line-height:1.6">Click <strong>Export Course Content</strong> in the right-hand sidebar.</li>
             <li style="font-size:13.5px;color:var(--c-ink-soft);line-height:1.6">Select <strong>Course</strong> as the export type, then click <strong>Create Export</strong>.</li>
-            <li style="font-size:13.5px;color:var(--c-ink-soft);line-height:1.6">Wait for Canvas to prepare the file — this usually takes less than a minute. A download link will appear when it's ready.</li>
+            <li style="font-size:13.5px;color:var(--c-ink-soft);line-height:1.6">Wait for Canvas to prepare the file - this usually takes less than a minute. A download link will appear when it's ready.</li>
             <li style="font-size:13.5px;color:var(--c-ink-soft);line-height:1.6">Download the <strong>.imscc</strong> file and upload it below.</li>
           </ol>
           <p style="font-size:12.5px;color:var(--c-ink-ghost);margin-top:.85rem;line-height:1.6">
@@ -1164,7 +1164,7 @@ async function extractPages(zip, pageMap) {
         content,
         module: entry
           ? entry.moduleName
-          : (manifestPresent ? 'Not attached to a module' : inferModule(key)),
+          : (manifestPresent ? 'Pages not attached to a module' : inferModule(key)),
         inManifest: !!entry,
         type: 'page'
       });
@@ -1978,7 +1978,7 @@ function renderModuleView() {
   keys.forEach((key, mi) => {
     const pages = sortedModulePages(key, auditData.byModule[key]);
     const isUnattached = key === UNATTACHED_KEY;
-    const displayName = isUnattached ? 'Not attached to a module' : key;
+    const displayName = isUnattached ? 'Pages not attached to a module' : key;
     const stats = moduleStats(pages);
     const moduleId = `mod-${mi}`;
 
@@ -2248,7 +2248,7 @@ function downloadSpreadsheet() {
       const s = moduleStats(pages);
       const isUnattached = key === UNATTACHED_KEY;
       rows.push([
-        cell(isUnattached ? 'Not attached to a module' : key, bodyStyle),
+        cell(isUnattached ? 'Pages not attached to a module' : key, bodyStyle),
         cell(pages.length, { alignment: { horizontal: 'center' }, font: { sz: 10 } }),
         cell(s.fail, s.fail > 0 ? { ...failStyle } : { alignment: { horizontal: 'center' }, font: { sz: 10 } }),
         cell(s.warn, s.warn > 0 ? { ...warnStyle } : { alignment: { horizontal: 'center' }, font: { sz: 10 } }),
@@ -2317,7 +2317,7 @@ function downloadSpreadsheet() {
     const keys = sortedModuleKeys(auditData.byModule);
     for (const key of keys) {
       const pages = sortedModulePages(key, auditData.byModule[key]);
-      const modName = key === UNATTACHED_KEY ? 'Not attached to a module' : key;
+      const modName = key === UNATTACHED_KEY ? 'Pages not attached to a module' : key;
       for (const page of pages) {
         for (const f of page.findings) {
           const st = statusStyle(f.status);
@@ -2396,7 +2396,7 @@ function downloadSpreadsheet() {
     const keys = sortedModuleKeys(auditData.byModule);
     for (const key of keys) {
       const pages = sortedModulePages(key, auditData.byModule[key]);
-      const modName = key === UNATTACHED_KEY ? 'Not attached to a module' : key;
+      const modName = key === UNATTACHED_KEY ? 'Pages not attached to a module' : key;
       for (const page of pages) {
         for (const f of page.findings) {
           if (f.status !== 'fail' && f.status !== 'warn') continue;
@@ -2613,7 +2613,7 @@ function pdfModuleView(doc, W, M, CW, startY) {
   for (const key of sortedModuleKeys(auditData.byModule)) {
     const pages = sortedModulePages(key, auditData.byModule[key]);
     const isUnattached = key === UNATTACHED_KEY;
-    const displayName  = isUnattached ? 'Not attached to a module' : key;
+    const displayName  = isUnattached ? 'Pages not attached to a module' : key;
     const stats = moduleStats(pages);
 
     if (y > PDF_BOTTOM - 10) { doc.addPage(); y = 20; }

@@ -860,6 +860,25 @@ body{
   </div>
 </div>
 
+<!-- ── Not-a-Canvas-export modal ─────────────────────────────────────────── -->
+<div id="not-canvas-overlay" onclick="closeNotCanvasModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:950"></div>
+<div id="not-canvas-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-54%);background:white;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.18);z-index:951;width:min(420px,90vw);padding:1.5rem 1.5rem 1.25rem">
+  <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:1rem">
+    <div style="width:36px;height:36px;border-radius:50%;background:#fee2e2;display:flex;align-items:center;justify-content:justify-content:center;flex-shrink:0;margin-top:1px;align-items:center;justify-content:center">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 3L1.5 15h15L9 3z" stroke="#b91c1c" stroke-width="1.5" stroke-linejoin="round"/><path d="M9 8v3" stroke="#b91c1c" stroke-width="1.5" stroke-linecap="round"/><circle cx="9" cy="13" r=".8" fill="#b91c1c"/></svg>
+    </div>
+    <div>
+      <h2 style="font-size:14px;font-weight:600;color:#0f1117;margin-bottom:4px">This doesn't look like a Canvas export</h2>
+      <p style="font-size:13px;color:#6b7280;line-height:1.6;margin-bottom:8px">The file you uploaded doesn't contain the content expected from a Canvas course export. It may be a different type of zip file.</p>
+      <p style="font-size:13px;color:#6b7280;line-height:1.6;margin-bottom:8px">To get the right file, go to your Canvas course and choose <strong>Settings → Export Course Content → Course</strong>, then upload the <strong>.imscc</strong> file that Canvas generates.</p>
+      <p id="not-canvas-error" style="display:none;font-size:11.5px;color:#9ca3af;line-height:1.5;font-family:monospace;margin-top:6px"></p>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:flex-end">
+    <button class="btn" onclick="closeNotCanvasModal()" style="font-size:13px">Try another file</button>
+  </div>
+</div>
+
 <!-- ── Invalid file modal ─────────────────────────────────────────────────── -->
 <div id="file-error-overlay" onclick="closeFileErrorModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:950"></div>
 <div id="file-error-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-54%);background:white;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.18);z-index:951;width:min(380px,90vw);padding:1.5rem 1.5rem 1.25rem">
@@ -876,6 +895,22 @@ body{
   <div style="display:flex;justify-content:flex-end">
     <button class="btn" onclick="closeFileErrorModal()" style="font-size:13px">Try another file</button>
   </div>
+</div>
+
+<!-- ── Jump buttons ──────────────────────────────────────────────────────────── -->
+<div id="jump-btns" style="display:none;position:fixed;bottom:1.5rem;right:1.5rem;z-index:800;display:none;flex-direction:column;gap:6px">
+  <button onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Jump to top"
+    style="width:36px;height:36px;border-radius:50%;border:1px solid var(--c-border-strong);background:white;box-shadow:0 2px 8px rgba(0,0,0,.1);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--c-ink-soft);transition:background .15s,color .15s"
+    onmouseover="this.style.background='var(--c-surface-2)';this.style.color='var(--c-ink)'"
+    onmouseout="this.style.background='white';this.style.color='var(--c-ink-soft)'">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 10L7 5l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+  <button onclick="window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})" title="Jump to bottom"
+    style="width:36px;height:36px;border-radius:50%;border:1px solid var(--c-border-strong);background:white;box-shadow:0 2px 8px rgba(0,0,0,.1);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--c-ink-soft);transition:background .15s,color .15s"
+    onmouseover="this.style.background='var(--c-surface-2)';this.style.color='var(--c-ink)'"
+    onmouseout="this.style.background='white';this.style.color='var(--c-ink-soft)'">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 4l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -944,6 +979,23 @@ fileInput.addEventListener('change', e => {
   fileInput.value = '';
 });
 
+function showNotCanvasModal(errMsg) {
+  const errEl = document.getElementById('not-canvas-error');
+  if (errMsg) {
+    errEl.textContent = 'Technical detail: ' + errMsg;
+    errEl.style.display = 'block';
+  } else {
+    errEl.style.display = 'none';
+  }
+  document.getElementById('not-canvas-overlay').style.display = 'block';
+  document.getElementById('not-canvas-modal').style.display   = 'block';
+}
+
+function closeNotCanvasModal() {
+  document.getElementById('not-canvas-overlay').style.display = 'none';
+  document.getElementById('not-canvas-modal').style.display   = 'none';
+}
+
 function showFileErrorModal(filename) {
   document.getElementById('file-error-msg').textContent =
     `"${filename}" doesn't appear to be a Canvas export file.`;
@@ -993,6 +1045,7 @@ function resetTool() {
   document.getElementById('canvas-url-input').value = '';
   const bar = document.getElementById('inline-cl-bar');
   if (bar) bar.style.display = 'none';
+  hideJumpButtons();
   const expandBtn = document.getElementById('expand-issues-btn');
   if (expandBtn) expandBtn.style.display = 'none';
   fileInput.value = '';
@@ -1034,6 +1087,19 @@ async function runAudit() {
 
   try {
     const zip = await JSZip.loadAsync(fileObj);
+    setProgress(15, 'Checking file contents...');
+    await sleep(200);
+
+    // Validate this looks like a Canvas export before proceeding.
+    // A valid export must contain imsmanifest.xml and at least one HTML page.
+    const hasManifest = !!Object.keys(zip.files).find(k => k === 'imsmanifest.xml' || k.endsWith('/imsmanifest.xml'));
+    const hasHtml     = !!Object.keys(zip.files).find(k => /\.html?$/i.test(k));
+    if (!hasManifest && !hasHtml) {
+      showNotCanvasModal();
+      resetTool();
+      return;
+    }
+
     setProgress(15, 'Parsing course manifest...');
     await sleep(200);
 
@@ -1093,10 +1159,12 @@ async function runAudit() {
 
     const mediaFiles = Object.keys(zip.files).filter(k => /\.(mp4|mov|avi|mp3|wav|ogg|webm)$/i.test(k));
     const imageFiles = Object.keys(zip.files).filter(k => /\.(jpg|jpeg|png|gif|svg|webp|bmp)$/i.test(k));
+    const gifFiles   = Object.keys(zip.files).filter(k => /\.gif$/i.test(k));
+    const pdfFiles   = Object.keys(zip.files).filter(k => /\.pdf$/i.test(k));
     setProgress(60, 'Checking color contrast ratios...');
     await sleep(300);
 
-    auditData = await performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOrder, pageOrder);
+    auditData = await performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOrder, pageOrder, gifFiles, pdfFiles);
 
     // Stamp a unique _clId on every issue object so checkboxes are always distinct
     let _clStamp = 0;
@@ -1137,7 +1205,7 @@ async function runAudit() {
 
     renderResults();
   } catch(err) {
-    alert('Error reading file: ' + err.message + '\n\nMake sure this is a valid Canvas export (.imscc/.zip).');
+    showNotCanvasModal(err.message);
     resetTool();
   }
 }
@@ -1494,7 +1562,7 @@ function checkPageContrast(doc, loc, url) {
 // Sentinel key for pages that exist in the export but aren't linked to any module.
 const UNATTACHED_KEY = '__unattached__';
 
-async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOrder = [], pageOrder = {}) {
+async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOrder = [], pageOrder = {}, gifFiles = [], pdfFiles = []) {
   const parser = new DOMParser();
   const results = { sections: [], byModule: {}, moduleOrder, pageOrder };
 
@@ -1755,14 +1823,30 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOr
   const videoIssues = videoFiles.map(f => {
     const parts = f.split('/');
     const name = parts[parts.length - 1];
-    const folder = parts.length > 1 ? parts.slice(0, -1).join('/') : 'root';
-    return { loc: folder, issue: name, fix: '' };
+    const folder = parts.length > 1 ? parts.slice(0, -1).join('/') : '';
+    return { loc: folder ? folder + '/' + name : name, issue: `Check captions, transcript, and audio description for: ${name}`, fix: 'Verify this video has accurate captions, a text transcript, and audio descriptions for any important visuals. Mark as done once all three have been confirmed.' };
   });
   const audioIssues = audioFiles.map(f => {
     const parts = f.split('/');
     const name = parts[parts.length - 1];
-    const folder = parts.length > 1 ? parts.slice(0, -1).join('/') : 'root';
-    return { loc: folder, issue: name, fix: '' };
+    const folder = parts.length > 1 ? parts.slice(0, -1).join('/') : '';
+    return { loc: folder ? folder + '/' + name : name, issue: `Check transcript for: ${name}`, fix: 'Verify this audio file has an accessible text transcript linked on the same Canvas page. Mark as done once confirmed.' };
+  });
+
+  // Build GIF issue list — each GIF needs manual review for flashing/animation
+  const gifIssues = gifFiles.map(f => {
+    const parts = f.split('/');
+    const name = parts[parts.length - 1];
+    const folder = parts.length > 1 ? parts.slice(0, -1).join('/') : '';
+    return { loc: folder ? folder + '/' + name : name, issue: `Check for flashing or looping animation: ${name}`, fix: 'Review this GIF for rapid flashing (more than 3 times per second) and confirm it either does not flash, or is removed/replaced. If it loops automatically, check whether students can pause it.' };
+  });
+
+  // Build PDF issue list — each PDF needs accessibility review
+  const pdfIssues = pdfFiles.map(f => {
+    const parts = f.split('/');
+    const name = parts[parts.length - 1];
+    const folder = parts.length > 1 ? parts.slice(0, -1).join('/') : '';
+    return { loc: folder ? folder + '/' + name : name, issue: `Review accessibility of PDF: ${name}`, fix: "Open this PDF in Adobe Acrobat and run the Accessibility Checker (Tools → Accessibility → Full Check). Address any issues found, particularly missing tags, reading order problems, and images without alt text. If the PDF cannot be fully remediated, provide an accessible alternative." };
   });
 
   // ── Build contrast check entry ────────────────────────────────────────────
@@ -1880,13 +1964,13 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOr
       id: 'flashing',
       category: 'Audio and Video',
       label: 'Seizure triggers — flashing content (WCAG 2.3.1)',
-      checks: [{ status: 'warn', title: 'Manual check required', detail: 'Rapidly flashing or strobing content can trigger seizures in people with photosensitive epilepsy. Review any animated GIFs, videos, or embedded media in your course for fast flashing effects. A general rule: if something flashes more than three times per second, it should be removed or replaced. When in doubt, pause and look — if it feels visually intense or disorienting, it likely needs to be changed.', wcag: 'WCAG 2.3.1 Level A', issues: [] }]
+      checks: [{ status: 'warn', title: gifIssues.length > 0 ? `${gifIssues.length} GIF file(s) found — review for flashing content` : 'Manual check required', detail: 'Rapidly flashing or strobing content can trigger seizures in people with photosensitive epilepsy. Review any animated GIFs, videos, or embedded media in your course for fast flashing effects. A general rule: if something flashes more than three times per second, it should be removed or replaced. When in doubt, pause and look — if it feels visually intense or disorienting, it likely needs to be changed.', wcag: 'WCAG 2.3.1 Level A', issues: gifIssues }]
     },
     {
       id: 'animated',
       category: 'Audio and Video',
       label: 'Animated/auto-updating content (WCAG 2.2.2)',
-      checks: [{ status: 'warn', title: 'Manual check required', detail: 'If your course includes anything that moves automatically — such as a slideshow that advances on its own, a scrolling marquee, or a looping animation — students must be able to pause or stop it. Moving content can be distracting or inaccessible for students with attention or cognitive disabilities. In Canvas, avoid auto-advancing embeds where possible, or ensure a pause button is clearly available.', wcag: 'WCAG 2.2.2 Level A', issues: [] }]
+      checks: [{ status: 'warn', title: gifIssues.length > 0 ? `${gifIssues.length} GIF file(s) found — review for auto-playing animation` : 'Manual check required', detail: 'If your course includes anything that moves automatically — such as a slideshow that advances on its own, a scrolling marquee, or a looping animation — students must be able to pause or stop it. Moving content can be distracting or inaccessible for students with attention or cognitive disabilities. In Canvas, avoid auto-advancing embeds where possible, or ensure a pause button is clearly available.', wcag: 'WCAG 2.2.2 Level A', issues: gifIssues }]
     },
 
     // ── Documents and Presentations ──────────────────────────────────────────
@@ -1894,7 +1978,7 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOr
       id: 'tagged-pdfs',
       category: 'Documents and Presentations',
       label: 'Tagged PDFs',
-      checks: [{ status: 'warn', title: 'Manual review required', detail: "Any PDF files linked in your course should be reviewed for accessibility and remediated before sharing with students. At minimum, PDFs should have tags (a behind-the-scenes structure that allows screen readers to read the document in the correct order), descriptive headings, alt text for images, and sufficient color contrast. Use Adobe Acrobat's built-in Accessibility Checker to identify and fix issues, or use the Make Accessible wizard if available. If a PDF cannot be fully remediated, provide an accessible alternative such as a Word document or HTML page.", wcag: 'WCAG 1.1.1, 1.3.1, 1.3.2 Level A', issues: [] }]
+      checks: [{ status: 'warn', title: pdfIssues.length > 0 ? `${pdfIssues.length} PDF file(s) found — accessibility review required` : 'Manual review required', detail: "Any PDF files linked in your course should be reviewed for accessibility and remediated before sharing with students. At minimum, PDFs should have tags (a behind-the-scenes structure that allows screen readers to read the document in the correct order), descriptive headings, alt text for images, and sufficient color contrast. Use Adobe Acrobat's built-in Accessibility Checker to identify and fix issues, or use the Make Accessible wizard if available. If a PDF cannot be fully remediated, provide an accessible alternative such as a Word document or HTML page.", wcag: 'WCAG 1.1.1, 1.3.1, 1.3.2 Level A', issues: pdfIssues }]
     },
     {
       id: 'office-docs',
@@ -1970,6 +2054,7 @@ function renderResults() {
   }
 
   showChecklistButton();
+  showJumpButtons();
 }
 
 // ── Check-type view ──────────────────────────────────────────────────────────
@@ -2094,15 +2179,7 @@ function renderCheck(c) {
 
   const issueHtml = (c.issues||[]).map((i, idx) => {
     // Media file listing rows (no fix text, loc = folder, issue = filename)
-    if (i.fix === '' && i.loc && i.issue && !i.issue.includes(' ')) {
-      return `<div class="warn-item" style="display:flex;align-items:center;gap:8px;padding:.4rem .8rem">
-        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="flex-shrink:0"><path d="M7.5 1H3a1 1 0 00-1 1v9a1 1 0 001 1h7a1 1 0 001-1V4.5L7.5 1z" stroke="var(--c-warn)" stroke-width="1.2"/><path d="M7.5 1v3.5H11" stroke="var(--c-warn)" stroke-width="1.2"/></svg>
-        <div>
-          <div style="font-size:10.5px;font-family:var(--font-mono);font-weight:600;color:var(--c-ink)">${escHtml(i.issue)}</div>
-          <div style="font-size:10px;color:var(--c-ink-muted);font-family:var(--font-mono)">${escHtml(i.loc)}/</div>
-        </div>
-      </div>`;
-    }
+
     const swatchHtml = (i.fgHex && i.bgHex)
       ? `<div class="contrast-swatch">
            <span class="swatch-box" style="background:${i.bgHex}" title="Background: ${i.bgHex}"></span>
@@ -2851,16 +2928,6 @@ function pdfHRule(doc, x, y, w, gray) {
 // Used by both pdfModuleView and pdfChecksView to keep formatting consistent.
 // Returns the updated y position after rendering.
 function pdfIssueBlock(doc, issue, cbxX, txtX, innerW, y, lineH, PDF_BOTTOM) {
-  const isMediaRow = issue.fix === '' && issue.loc && !issue.issue.includes(' ');
-  if (isMediaRow) {
-    const nameLines = doc.splitTextToSize(issue.issue, innerW);
-    const locLine   = doc.splitTextToSize(issue.loc + '/', innerW);
-    pdfCheckbox(doc, cbxX, y, false);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(30,30,30);
-    y = pdfSafeText(doc, nameLines, txtX, y, lineH, PDF_BOTTOM);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(110,110,110);
-    y = pdfSafeText(doc, locLine, txtX, y, lineH, PDF_BOTTOM);
-  } else {
     const locLines  = issue.loc  ? doc.splitTextToSize(issue.loc,  innerW) : [];
     const descLines = doc.splitTextToSize(issue.issue || '', innerW);
     const fixLines  = issue.fix  ? doc.splitTextToSize(`Suggestion: ${issue.fix}`, innerW) : [];
@@ -2879,7 +2946,6 @@ function pdfIssueBlock(doc, issue, cbxX, txtX, innerW, y, lineH, PDF_BOTTOM) {
       doc.text(fixLines, txtX, y);
       y += fixLines.length * lineH;
     }
-  }
   y += 2;
   return y;
 }
@@ -3138,6 +3204,14 @@ function expandIssues() {
 // Called at the end of every renderResults() run. Shows the expand-issues button,
 // then re-applies any persisted checked states to the freshly-rendered DOM items,
 // and finally refreshes the progress bar totals.
+function showJumpButtons() {
+  document.getElementById('jump-btns').style.display = 'flex';
+}
+
+function hideJumpButtons() {
+  document.getElementById('jump-btns').style.display = 'none';
+}
+
 function showChecklistButton() {
   // Show/hide the expand button depending on whether there are any open issues
   const expandBtn = document.getElementById('expand-issues-btn');

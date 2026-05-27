@@ -15,7 +15,7 @@
   --c-surface-3: #e5e8ed;
   --c-border:    rgba(15,17,23,0.09);
   --c-border-strong: rgba(15,17,23,0.16);
-  --c-pass:   #16a34a;
+  --c-pass:   #11813a;
   --c-pass-bg:#dcfce7;
   --c-fail:   #dc2626;
   --c-fail-bg:#fee2e2;
@@ -71,14 +71,14 @@ body{
   flex-shrink: 0;
 }
 .hdr h1{
-  font-size:18px;
+  font-size:19px;
   font-weight: 600;
   letter-spacing: -.3px;
   color: var(--c-ink);
   line-height: 1.2;
 }
 .hdr p{
-  font-size:13.5px;
+  font-size:14.5px;
   color: var(--c-ink-muted);
   margin-top: 3px;
   font-weight: 300;
@@ -129,13 +129,13 @@ body{
   display: flex; align-items: center; justify-content: center;
 }
 .upload-zone h2{
-  font-size:16px;
+  font-size:17px;
   font-weight: 600;
   color: var(--c-ink);
   margin-bottom: .15rem;
   letter-spacing: -.2px;
 }
-.upload-zone p{font-size:14px; color: var(--c-ink-muted); font-weight:300}
+.upload-zone p{font-size:15px; color: var(--c-ink-muted); font-weight:300}
 .upload-zone input{display:none}
 
 /* ── Buttons ──────────────────────────────────────────────────────────────── */
@@ -148,7 +148,7 @@ body{
   border: 1px solid var(--c-border-strong);
   background: white;
   font-family: var(--font-body);
-  font-size:14px;
+  font-size:15px;
   font-weight: 500;
   cursor: pointer;
   color: var(--c-ink-soft);
@@ -178,6 +178,10 @@ body{
   cursor: not-allowed;
   box-shadow: none;
 }
+.btn-danger:hover{ border-color: #b91c1c !important; color: #b91c1c; }
+.btn-blue:hover{  border-color: #1d4ed8 !important; color: #1d4ed8; }
+.btn.primary.btn-blue:hover{ background: #1d4ed8; border-color: #1d4ed8; color: white; }
+.btn-green:hover{ border-color: #11813a !important; color: #11813a; }
 
 /* ── Progress ─────────────────────────────────────────────────────────────── */
 .progress-wrap{margin: 1.75rem 0}
@@ -196,7 +200,7 @@ body{
   box-shadow: 0 0 8px rgba(37,99,235,.4);
 }
 .progress-label{
-  font-size:13px;
+  font-size:14px;
   color: var(--c-ink-muted);
   font-weight: 400;
 }
@@ -229,7 +233,7 @@ body{
   font-variant-numeric: tabular-nums;
 }
 .summary-card .lbl{
-  font-size:11.5px;
+  font-size:12.5px;
   color: #5f6470;
   margin-top: 5px;
   text-transform: uppercase;
@@ -258,8 +262,8 @@ body{
   gap: 2px;
 }
 .view-btn{
-  font-size:13px;
-  padding: 5px 13px;
+  font-size:12px;
+  padding: 4px 11px;
   border-radius: var(--r-md);
   border: none;
   background: transparent;
@@ -292,8 +296,8 @@ body{
   width: fit-content;
 }
 .filter-btn{
-  font-size:13px;
-  padding: 5px 13px;
+  font-size:12px;
+  padding: 4px 11px;
   border-radius: var(--r-md);
   border: none;
   background: transparent;
@@ -320,7 +324,7 @@ body{
   flex-shrink: 0;
 }
 .badge{
-  font-size:11.5px;
+  font-size:12.5px;
   padding: 2px 8px;
   border-radius: 100px;
   font-weight: 600;
@@ -332,7 +336,7 @@ body{
 .badge-manual{background: var(--c-surface-3); color: #4b5563}
 
 .chevron{
-  font-size:11px;
+  font-size:12px;
   color: var(--c-ink-ghost);
   transition: transform .25s cubic-bezier(.4,0,.2,1);
   flex-shrink: 0;
@@ -371,7 +375,7 @@ body{
   gap: 8px;
 }
 .module-name h3{
-  font-size:15px;
+  font-size:16px;
   font-weight: 600;
   color: var(--c-ink);
   letter-spacing: -.2px;
@@ -401,7 +405,7 @@ body{
 }
 .page-hdr:hover{ background: var(--c-surface-2); }
 .page-hdr h4{
-  font-size:13.5px;
+  font-size:14.5px;
   font-weight: 500;
   color: var(--c-ink);
   letter-spacing: -.1px;
@@ -426,7 +430,7 @@ body{
 }
 .finding-row:last-child{ border-bottom: none; }
 .finding-label{
-  font-size:11px;
+  font-size:12px;
   font-weight: 600;
   font-family: var(--font-mono);
   color: var(--c-ink-ghost);
@@ -438,13 +442,13 @@ body{
 }
 .finding-content{ }
 .finding-title{
-  font-size:13.5px;
+  font-size:14.5px;
   font-weight: 500;
   color: var(--c-ink);
   margin-bottom: 2px;
 }
 .finding-detail{
-  font-size:12.5px;
+  font-size:13.5px;
   color: var(--c-ink-muted);
   line-height: 1.5;
 }
@@ -465,20 +469,20 @@ body{
 }
 .check-item:last-child{border-bottom: none}
 .check-title{
-  font-size:14px;
+  font-size:15px;
   font-weight: 500;
   color: var(--c-ink);
   margin-bottom: 2px;
   letter-spacing: -.1px;
 }
 .check-detail{
-  font-size:13px;
+  font-size:14px;
   color: var(--c-ink-muted);
   line-height: 1.6;
   font-weight: 300;
 }
 .check-wcag{
-  font-size:11.5px;
+  font-size:12.5px;
   color: var(--c-ink-ghost);
   margin-top: 4px;
   font-family: var(--font-mono);
@@ -503,7 +507,7 @@ body{
 /* Location labels: muted neutral, still high-contrast on light backgrounds */
 .issue-item .issue-loc,
 .warn-item .issue-loc{
-  font-size:11.5px;
+  font-size:12.5px;
   font-weight: 600;
   margin-bottom: 2px;
   font-family: var(--font-mono);
@@ -513,14 +517,14 @@ body{
 /* Issue/warn description text — black for WCAG contrast compliance */
 .issue-item .issue-desc,
 .warn-item .issue-desc{
-  font-size:13px;
+  font-size:14px;
   line-height: 1.55;
   font-weight: 400;
   color: var(--c-ink);
 }
 .issue-item .issue-fix,
 .warn-item .issue-fix{
-  font-size:12px;
+  font-size:13px;
   color: var(--c-ink-muted);
   margin-top: 4px;
   font-style: italic;
@@ -547,13 +551,13 @@ body{
   padding: .45rem .7rem;
   margin-top: .35rem;
   border-left: 2.5px solid transparent;
-  font-size:13px;
+  font-size:14px;
 }
 .mod-issue-item{ background: #fff5f5; border-color: var(--c-fail); color: var(--c-ink); }
 .mod-warn-item{  background: #fffbeb; border-color: var(--c-warn);  color: var(--c-ink); }
 .mod-pass-item{  background: var(--c-pass-bg); border-color: var(--c-pass); color: #14532d; }
 .mod-issue-item .fix, .mod-warn-item .fix{
-  font-size:12px;
+  font-size:13px;
   color: var(--c-ink-muted);
   margin-top: 3px;
   font-style: italic;
@@ -595,7 +599,7 @@ body{
 }
 
 /* ── Actions ──────────────────────────────────────────────────────────────── */
-.actions{display: flex; gap: 8px; margin-top: 1.25rem; flex-wrap: wrap}
+.actions{display: flex; gap: 6px; margin-top: 1.25rem; flex-wrap: nowrap}
 
 
 /* ── Visibility ───────────────────────────────────────────────────────────── */
@@ -614,8 +618,8 @@ body{
   box-shadow: var(--shadow-xs);
   margin-top: 1rem;
 }
-.file-info p{font-size:14px; color: var(--c-ink); font-weight: 500}
-.file-info span{font-size:13px; color: var(--c-ink-muted)}
+.file-info p{font-size:15px; color: var(--c-ink); font-weight: 500}
+.file-info span{font-size:14px; color: var(--c-ink-muted)}
 .file-close-btn{
   display: flex;
   align-items: center;
@@ -655,7 +659,7 @@ body{
   flex-shrink: 0;
 }
 .contrast-ratio-pill{
-  font-size:11px;
+  font-size:12px;
   font-weight: 600;
   font-family: var(--font-mono);
   color: var(--c-ink-soft);
@@ -670,10 +674,10 @@ body{
   text-align: center;
   padding: 2rem;
   color: var(--c-ink-muted);
-  font-size:14px;
+  font-size:15px;
 }
 .category-heading{
-  font-size: 11.5px;
+  font-size:12.5px;
   font-weight: 600;
   color: var(--c-ink-ghost);
   text-transform: uppercase;
@@ -701,23 +705,23 @@ body{
 
     <!-- ── Explainer ──────────────────────────────────────────────────────────── -->
     <div style="margin-bottom:1.5rem">
-      <p style="font-size:14px;color:var(--c-ink-soft);line-height:1.7;margin-bottom:1.1rem">
+      <p style="font-size:15px;color:var(--c-ink-soft);line-height:1.7;margin-bottom:1.1rem">
         This tool checks your Canvas course for common accessibility issues and tells you exactly how to fix them — no technical background required. Upload your course export file below and you'll get a page-by-page report in seconds.
       </p>
       <details style="background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--r-lg);overflow:hidden">
-        <summary style="padding:.8rem 1.1rem;font-size:14px;font-weight:500;color:var(--c-ink);cursor:pointer;user-select:none;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <summary style="padding:.8rem 1.1rem;font-size:15px;font-weight:500;color:var(--c-ink);cursor:pointer;user-select:none;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px">
           <span>How to export your course from Canvas</span>
           <svg class="details-chevron" width="14" height="14" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;transition:transform .2s"><path d="M2 4.5l5 5 5-5" stroke="var(--c-ink-ghost)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </summary>
         <div style="padding:.1rem 1.1rem 1rem;border-top:1px solid var(--c-border)">
           <ol style="margin:.75rem 0 0 1.1rem;display:flex;flex-direction:column;gap:.55rem">
-            <li style="font-size:13.5px;color:var(--c-ink-soft);line-height:1.6">Open your course in Canvas and go to <strong>Settings</strong> (bottom of the left-hand navigation).</li>
-            <li style="font-size:13.5px;color:var(--c-ink-soft);line-height:1.6">Click <strong>Export Course Content</strong> in the right-hand sidebar.</li>
-            <li style="font-size:13.5px;color:var(--c-ink-soft);line-height:1.6">Select <strong>Course</strong> as the export type, then click <strong>Create Export</strong>.</li>
-            <li style="font-size:13.5px;color:var(--c-ink-soft);line-height:1.6">Wait for Canvas to prepare the file — this usually takes less than a minute. A download link will appear when it's ready.</li>
-            <li style="font-size:13.5px;color:var(--c-ink-soft);line-height:1.6">Download the <strong>.imscc</strong> file and upload it below.</li>
+            <li style="font-size:14.5px;color:var(--c-ink-soft);line-height:1.6">Open your course in Canvas and go to <strong>Settings</strong> (bottom of the left-hand navigation).</li>
+            <li style="font-size:14.5px;color:var(--c-ink-soft);line-height:1.6">Click <strong>Export Course Content</strong> in the right-hand sidebar.</li>
+            <li style="font-size:14.5px;color:var(--c-ink-soft);line-height:1.6">Select <strong>Course</strong> as the export type, then click <strong>Create Export</strong>.</li>
+            <li style="font-size:14.5px;color:var(--c-ink-soft);line-height:1.6">Wait for Canvas to prepare the file — this usually takes less than a minute. A download link will appear when it's ready.</li>
+            <li style="font-size:14.5px;color:var(--c-ink-soft);line-height:1.6">Download the <strong>.imscc</strong> file and upload it below.</li>
           </ol>
-          <p style="font-size:12.5px;color:var(--c-ink-ghost);margin-top:.85rem;line-height:1.6">The exported file stays in your browser — nothing is uploaded to a server or shared with anyone.</p>
+          <p style="font-size:13.5px;color:var(--c-ink-ghost);margin-top:.85rem;line-height:1.6">The exported file stays in your browser — nothing is uploaded to a server or shared with anyone.</p>
         </div>
       </details>
     </div>
@@ -733,6 +737,16 @@ body{
       <p>Accepts .imscc or .zip files exported from Canvas</p>
       <input type="file" id="file-input" accept=".imscc,.zip">
     </div>
+    <!-- Restore progress — always visible on the upload screen -->
+    <div style="margin-top:.85rem;display:flex;align-items:center;gap:10px">
+      <label for="progress-restore-input" class="btn btn-blue" style="cursor:pointer;font-size:14px;color:var(--c-ink-soft)" title="Upload a previously saved progress package to restore your work">
+        <svg width="14" height="14" viewBox="0 0 13 13" fill="none"><path d="M11 8v2.5a1 1 0 01-1 1H3a1 1 0 01-1-1V8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M6.5 1v7M4 3.5L6.5 1 9 3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Restore saved progress
+      </label>
+      <input type="file" id="progress-restore-input" accept=".zip" style="display:none">
+      <span id="progress-restore-name" style="font-size:14px;color:var(--c-pass);display:none"></span>
+    </div>
+
     <div id="file-preview" style="display:none">
       <div class="file-info">
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M13 2H6a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7l-3-5z" stroke="var(--c-ink-muted)" stroke-width="1.5"/><polyline points="13 2 13 7 18 7" stroke="var(--c-ink-muted)" stroke-width="1.5"/></svg>
@@ -747,7 +761,7 @@ body{
         </button>
       </div>
       <div style="margin-top:1rem">
-        <label for="canvas-url-input" style="display:block;font-size:13.5px;font-weight:500;color:var(--c-ink-soft);margin-bottom:6px">
+        <label for="canvas-url-input" style="display:block;font-size:14.5px;font-weight:500;color:var(--c-ink-soft);margin-bottom:6px">
           Canvas course URL
           <span style="font-weight:400;color:var(--c-ink-ghost);margin-left:4px">— optional, enables direct page links in the report</span>
         </label>
@@ -758,16 +772,17 @@ body{
               id="canvas-url-input"
               type="url"
               placeholder="https://canvas.instructure.com/courses/123456"
-              style="width:100%;padding:8px 10px 8px 30px;border:1px solid var(--c-border-strong);border-radius:var(--r-md);font-family:var(--font-body);font-size:14px;color:var(--c-ink);background:white;box-shadow:var(--shadow-xs);outline:none;transition:border-color .15s,box-shadow .15s"
+              style="width:100%;padding:8px 10px 8px 30px;border:1px solid var(--c-border-strong);border-radius:var(--r-md);font-family:var(--font-body);font-size:15px;color:var(--c-ink);background:white;box-shadow:var(--shadow-xs);outline:none;transition:border-color .15s,box-shadow .15s"
               onfocus="this.style.borderColor='var(--c-accent)';this.style.boxShadow='0 0 0 3px rgba(37,99,235,.1)'"
               onblur="this.style.borderColor='';this.style.boxShadow='var(--shadow-xs)'"
             >
           </div>
         </div>
-        <p style="font-size:12.5px;color:var(--c-ink-ghost);margin-top:5px">Paste the URL from your browser while viewing any page in this course.</p>
+        <p style="font-size:13.5px;color:var(--c-ink-ghost);margin-top:5px">Paste the URL from your browser while viewing any page in this course.</p>
       </div>
-      <div style="display:flex;gap:8px;margin-top:1rem">
-        <button class="btn primary" id="run-btn" onclick="runAudit()">Run accessibility audit</button>
+      <div style="display:flex;gap:8px;margin-top:1rem;flex-wrap:wrap;align-items:center">
+        <button class="btn primary btn-blue" id="run-btn" onclick="runAudit()">Run accessibility audit</button>
+
       </div>
     </div>
     <div id="progress-area" style="display:none">
@@ -783,13 +798,18 @@ body{
 
   <div id="results">
 
+    <!-- Course title -->
+    <div id="course-title-bar" style="display:none;margin-bottom:.65rem">
+      <span id="course-title-text" style="font-size:17px;font-weight:600;color:#1d4ed8;letter-spacing:-.2px"></span>
+    </div>
+
     <!-- Checklist progress bar -->
     <div id="inline-cl-bar" style="display:none;background:white;border:1px solid var(--c-border);border-radius:var(--r-lg);padding:.65rem 1rem;margin-bottom:.85rem;display:none">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
-        <span style="font-size:13px;font-weight:500;color:var(--c-ink-soft)">Fix progress</span>
+        <span style="font-size:14px;font-weight:500;color:var(--c-ink-soft)">Fix progress</span>
         <div style="display:flex;align-items:center;gap:10px">
-          <span id="inline-cl-label" style="font-size:13px;font-weight:600;color:#1d4ed8">0 of 0 fixed</span>
-          <button class="btn" onclick="clClearAll()" style="font-size:12px;padding:4px 10px">Reset progress</button>
+          <span id="inline-cl-label" style="font-size:14px;font-weight:600;color:#1d4ed8">0 of 0 fixed</span>
+          <button class="btn btn-danger" onclick="clClearAll()" style="font-size:13px;padding:4px 10px">Reset progress</button>
         </div>
       </div>
       <div style="height:5px;border-radius:3px;background:var(--c-surface-3);overflow:hidden">
@@ -809,7 +829,7 @@ body{
           By Check Type
         </button>
       </div>
-      <button class="btn" id="expand-issues-btn" onclick="expandIssues()" style="font-size:13px;white-space:nowrap;display:none" data-expanded="false">
+      <button class="btn" id="expand-issues-btn" onclick="expandIssues()" style="font-size:12px;white-space:nowrap;display:none" data-expanded="false">
         <svg id="expand-issues-icon" width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 4.5l4.5 4.5 4.5-4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 1v8M2 9.5h9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
         <span id="expand-issues-label">Expand all with issues</span>
       </button>
@@ -822,20 +842,24 @@ body{
     </div>
 
     <div id="results-body"></div>
-    <div class="actions">
-      <button class="btn" onclick="downloadPDF()">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 10.5v1.5a1 1 0 001 1h8a1 1 0 001-1v-1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M7 1v7.5M4.5 6L7 8.5 9.5 6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Download PDF report
+    <div class="actions" style="flex-wrap:nowrap">
+      <button class="btn btn-green" onclick="saveProgress()" style="white-space:nowrap">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M11 3.5V10a1 1 0 01-1 1H3a1 1 0 01-1-1V3.5M4.5 1h4L10 3.5H3L4.5 1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M5 7h3M5 9h2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+        Save progress
       </button>
-      <button class="btn" onclick="downloadSpreadsheet()">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 10.5v1.5a1 1 0 001 1h8a1 1 0 001-1v-1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M7 1v7.5M4.5 6L7 8.5 9.5 6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Download Spreadsheet
-      </button>
-
       <div style="width:1px;background:var(--c-border-strong);align-self:stretch;margin:0 2px;flex-shrink:0"></div>
-      <button class="btn" onclick="confirmReset()">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-        Clear all and check another file
+      <button class="btn btn-blue" onclick="downloadPDF()" style="white-space:nowrap">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 10.5v1.5a1 1 0 001 1h8a1 1 0 001-1v-1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M7 1v7.5M4.5 6L7 8.5 9.5 6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        PDF report
+      </button>
+      <button class="btn btn-blue" onclick="downloadSpreadsheet()" style="white-space:nowrap">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 10.5v1.5a1 1 0 001 1h8a1 1 0 001-1v-1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M7 1v7.5M4.5 6L7 8.5 9.5 6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Spreadsheet
+      </button>
+      <div style="width:1px;background:var(--c-border-strong);align-self:stretch;margin:0 2px;flex-shrink:0"></div>
+      <button class="btn btn-danger" onclick="confirmReset()" style="white-space:nowrap">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        Clear &amp; restart
       </button>
     </div>
   </div>
@@ -850,13 +874,13 @@ body{
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 3L1.5 15h15L9 3z" stroke="#b91c1c" stroke-width="1.5" stroke-linejoin="round"/><path d="M9 8v3.5" stroke="#b91c1c" stroke-width="1.5" stroke-linecap="round"/><circle cx="9" cy="13.5" r=".75" fill="#b91c1c"/></svg>
     </div>
     <div>
-      <h2 style="font-size:15px;font-weight:600;color:#0f1117;margin-bottom:4px;letter-spacing:-.2px">Clear all progress?</h2>
-      <p style="font-size:14px;color:#6b7280;line-height:1.5">All checked items and fix progress will be permanently erased. This cannot be undone.</p>
+      <h2 style="font-size:16px;font-weight:600;color:#0f1117;margin-bottom:4px;letter-spacing:-.2px">Clear all progress?</h2>
+      <p style="font-size:15px;color:#6b7280;line-height:1.5">All checked items and fix progress will be permanently erased. This cannot be undone.</p>
     </div>
   </div>
   <div style="display:flex;gap:8px;justify-content:flex-end">
-    <button class="btn" onclick="closeConfirmModal()" style="font-size:14px">Cancel</button>
-    <button class="btn" onclick="resetTool()" style="font-size:14px;background:#b91c1c;color:white;border-color:#b91c1c">Clear and continue</button>
+    <button class="btn" onclick="closeConfirmModal()" style="font-size:15px">Cancel</button>
+    <button class="btn" onclick="resetTool()" style="font-size:15px;background:#b91c1c;color:white;border-color:#b91c1c">Clear and continue</button>
   </div>
 </div>
 
@@ -868,14 +892,14 @@ body{
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 3L1.5 15h15L9 3z" stroke="#b91c1c" stroke-width="1.5" stroke-linejoin="round"/><path d="M9 8v3" stroke="#b91c1c" stroke-width="1.5" stroke-linecap="round"/><circle cx="9" cy="13" r=".8" fill="#b91c1c"/></svg>
     </div>
     <div>
-      <h2 style="font-size:14px;font-weight:600;color:#0f1117;margin-bottom:4px">This doesn't look like a Canvas export</h2>
-      <p style="font-size:13px;color:#6b7280;line-height:1.6;margin-bottom:8px">The file you uploaded doesn't contain the content expected from a Canvas course export. It may be a different type of zip file.</p>
-      <p style="font-size:13px;color:#6b7280;line-height:1.6;margin-bottom:8px">To get the right file, go to your Canvas course and choose <strong>Settings → Export Course Content → Course</strong>, then upload the <strong>.imscc</strong> file that Canvas generates.</p>
-      <p id="not-canvas-error" style="display:none;font-size:11.5px;color:#9ca3af;line-height:1.5;font-family:monospace;margin-top:6px"></p>
+      <h2 style="font-size:15px;font-weight:600;color:#0f1117;margin-bottom:4px">This doesn't look like a Canvas export</h2>
+      <p style="font-size:14px;color:#6b7280;line-height:1.6;margin-bottom:8px">The file you uploaded doesn't contain the content expected from a Canvas course export. It may be a different type of zip file.</p>
+      <p style="font-size:14px;color:#6b7280;line-height:1.6;margin-bottom:8px">To get the right file, go to your Canvas course and choose <strong>Settings → Export Course Content → Course</strong>, then upload the <strong>.imscc</strong> file that Canvas generates.</p>
+      <p id="not-canvas-error" style="display:none;font-size:12.5px;color:#9ca3af;line-height:1.5;font-family:monospace;margin-top:6px"></p>
     </div>
   </div>
   <div style="display:flex;justify-content:flex-end">
-    <button class="btn" onclick="closeNotCanvasModal()" style="font-size:13px">Try another file</button>
+    <button class="btn" onclick="closeNotCanvasModal()" style="font-size:14px">Try another file</button>
   </div>
 </div>
 
@@ -887,13 +911,13 @@ body{
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7.5" stroke="#b91c1c" stroke-width="1.5"/><path d="M6 6l6 6M12 6l-6 6" stroke="#b91c1c" stroke-width="1.5" stroke-linecap="round"/></svg>
     </div>
     <div>
-      <h2 style="font-size:14px;font-weight:600;color:#0f1117;margin-bottom:4px">File not recognised</h2>
-      <p id="file-error-msg" style="font-size:13px;color:#6b7280;line-height:1.5"></p>
-      <p style="font-size:13px;color:#6b7280;line-height:1.5;margin-top:6px">Please upload a <strong>.imscc</strong> or <strong>.zip</strong> file exported from Canvas. To export your course, go to <strong>Settings → Export Course Content → Course</strong> in Canvas.</p>
+      <h2 style="font-size:15px;font-weight:600;color:#0f1117;margin-bottom:4px">File not recognised</h2>
+      <p id="file-error-msg" style="font-size:14px;color:#6b7280;line-height:1.5"></p>
+      <p style="font-size:14px;color:#6b7280;line-height:1.5;margin-top:6px">Please upload a <strong>.imscc</strong> or <strong>.zip</strong> file exported from Canvas. To export your course, go to <strong>Settings → Export Course Content → Course</strong> in Canvas.</p>
     </div>
   </div>
   <div style="display:flex;justify-content:flex-end">
-    <button class="btn" onclick="closeFileErrorModal()" style="font-size:13px">Try another file</button>
+    <button class="btn" onclick="closeFileErrorModal()" style="font-size:14px">Try another file</button>
   </div>
 </div>
 
@@ -973,6 +997,12 @@ dropZone.addEventListener('drop', e => {
   const f = e.dataTransfer.files[0];
   if (f) handleFile(f);
 });
+document.getElementById('progress-restore-input').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (f) handleProgressRestore(f);
+  e.target.value = '';
+});
+
 fileInput.addEventListener('change', e => {
   const f = e.target.files[0];
   if (f) handleFile(f);
@@ -1037,12 +1067,16 @@ function resetTool() {
   closeConfirmModal();
   fileObj = null; auditData = null; canvasBaseUrl = '';
   Object.keys(clChecked).forEach(k => delete clChecked[k]);
+  pendingRestoreIds = [];
+  document.getElementById('progress-restore-name').style.display = 'none';
+  document.getElementById('progress-restore-input').value = '';
   document.getElementById('upload-area').style.display = 'block';
   document.getElementById('results').style.display = 'none';
   document.getElementById('file-preview').style.display = 'none';
   document.getElementById('progress-area').style.display = 'none';
   document.getElementById('run-btn').disabled = false;
   document.getElementById('canvas-url-input').value = '';
+  document.getElementById('progress-restore-name').style.display = 'none';
   const bar = document.getElementById('inline-cl-bar');
   if (bar) bar.style.display = 'none';
   hideJumpButtons();
@@ -1110,7 +1144,18 @@ async function runAudit() {
     const parser = new DOMParser();
     const xmlDoc = manifest ? parser.parseFromString(manifest, 'text/xml') : null;
 
-    const { pageMap, moduleOrder, pageOrder } = parseManifest(xmlDoc);
+    const { pageMap, moduleOrder, pageOrder, courseTitle: manifestTitle } = parseManifest(xmlDoc);
+
+    // Canvas course_settings/course_settings.xml has the real course name
+    let courseTitle = manifestTitle || '';
+    const courseSettingsXml = await getFile(zip, 'course_settings/course_settings.xml');
+    if (courseSettingsXml) {
+      const csDoc = parser.parseFromString(courseSettingsXml, 'text/xml');
+      const nameEl = csDoc.querySelector('title, name');
+      if (nameEl && nameEl.textContent.trim()) courseTitle = nameEl.textContent.trim();
+    }
+    // Fallback to filename without extension
+    if (!courseTitle && fileObj) courseTitle = fileObj.name.replace(/\.(?:imscc|zip)$/i, '');
 
     // Read course_settings/module_meta.xml to get per-item workflow_state.
     // This is the only reliable source of publish status in Canvas IMSCC exports.
@@ -1165,6 +1210,7 @@ async function runAudit() {
     await sleep(300);
 
     auditData = await performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOrder, pageOrder, gifFiles, pdfFiles);
+    auditData.courseTitle = courseTitle;
 
     // Stamp a unique _clId on every issue object so checkboxes are always distinct
     let _clStamp = 0;
@@ -1203,6 +1249,7 @@ async function runAudit() {
     setProgress(100, 'Done!');
     await sleep(400);
 
+    applyPendingRestore();
     renderResults();
   } catch(err) {
     showNotCanvasModal(err.message);
@@ -1312,7 +1359,19 @@ function parseManifest(xmlDoc) {
       });
   }
 
-  return { pageMap, moduleOrder, pageOrder, hasManifest: true };
+  // Course title — from the <organization> title element, or the manifest <title>
+  let courseTitle = '';
+  const orgEl = xmlDoc.querySelector('organization');
+  if (orgEl) {
+    const orgTitleEl = orgEl.querySelector(':scope > title');
+    if (orgTitleEl) courseTitle = orgTitleEl.textContent.trim();
+  }
+  if (!courseTitle) {
+    const manifestTitle = xmlDoc.querySelector('manifest > metadata title, manifest title');
+    if (manifestTitle) courseTitle = manifestTitle.textContent.trim();
+  }
+
+  return { pageMap, moduleOrder, pageOrder, hasManifest: true, courseTitle };
 }
 
 async function extractPages(zip, pageMap) {
@@ -2046,6 +2105,17 @@ function filterResults(f, btn) {
 function renderResults() {
   document.getElementById('upload-area').style.display = 'none';
   document.getElementById('results').style.display = 'block';
+  window.scrollTo({ top: 0, behavior: 'instant' });
+
+  // Show course title if available
+  const titleBar  = document.getElementById('course-title-bar');
+  const titleText = document.getElementById('course-title-text');
+  if (auditData && auditData.courseTitle) {
+    titleText.textContent = auditData.courseTitle;
+    titleBar.style.display = 'block';
+  } else {
+    titleBar.style.display = 'none';
+  }
 
   if (currentView === 'modules') {
     renderModuleView();
@@ -2191,8 +2261,10 @@ function renderCheck(c) {
       : '';
     const locHtml = i.url
       ? `<a href="${escHtml(i.url)}" target="_blank" rel="noopener"
-            style="font-size:10.5px;font-weight:600;font-family:var(--font-mono);letter-spacing:.02em;color:var(--c-accent);text-decoration:none;display:inline-flex;align-items:center;gap:3px"
+            style="font-size:10.5px;font-weight:600;font-family:var(--font-mono);letter-spacing:.02em;color:var(--c-accent);text-decoration:none;display:inline-flex;align-items:center;gap:3px;transition:color .15s"
             title="Open page in Canvas"
+            onmouseover="this.style.color='#1d4ed8';this.style.textDecoration='underline'"
+            onmouseout="this.style.color='var(--c-accent)';this.style.textDecoration='none'"
             onclick="event.stopPropagation()">
            ${escHtml(i.loc||'')}
            <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1.5 8.5l7-7M8.5 1.5H4M8.5 1.5v4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -2384,8 +2456,8 @@ function renderPageBlock(page, pid, filter) {
           title="${page.pageType === 'discussion' ? 'Open discussions in Canvas' : 'Open page in Canvas'}"
           onclick="event.stopPropagation()"
           style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;color:var(--c-ink-soft);text-decoration:none;padding:2px 8px;border-radius:var(--r-sm);border:1px solid var(--c-border-strong);background:white;flex-shrink:0;transition:background .15s,color .15s"
-          onmouseover="this.style.background='var(--c-surface-2)';this.style.color='var(--c-ink)'"
-          onmouseout="this.style.background='white';this.style.color='var(--c-ink-soft)'">
+          onmouseover="this.style.background='#eff6ff';this.style.color='#1d4ed8';this.style.borderColor='#1d4ed8'"
+          onmouseout="this.style.background='white';this.style.color='var(--c-ink-soft)';this.style.borderColor='var(--c-border-strong)'">
          <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 8.5l7-7M8.5 1.5H4M8.5 1.5v4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
          Open
        </a>`
@@ -2992,12 +3064,8 @@ function pdfModuleView(doc, W, M, CW, startY) {
       // ── Page heading ────────────────────────────────────────────────────────
       const pageTypeLabel = page.pageType === 'discussion' ? 'Discussion: ' : 'Page: ';
       doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(30,30,30);
-      const pgLines = doc.splitTextToSize(`${pageTypeLabel}${page.pageName}`, CW - (page.pageUrl ? 55 : 4));
+      const pgLines = doc.splitTextToSize(`${pageTypeLabel}${page.pageName}`, CW - 4);
       doc.text(pgLines, M, y);
-      if (page.pageUrl) {
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(110,110,110);
-        doc.text(doc.splitTextToSize(page.pageUrl, 52)[0], M+CW, y, {align:'right'});
-      }
       y += pgLines.length * 4.5 + 2;
 
       for (const f of page.findings) {
@@ -3092,6 +3160,122 @@ function pdfChecksView(doc, W, M, CW, startY) {
     y += 4;
   }
 }
+// ── Progress save / restore ──────────────────────────────────────────────────
+
+// Exports the current checklist state as a small JSON file the user can save.
+// The file records the course filename and every checked item ID so it can be
+// re-imported on a future visit.
+async function saveProgress() {
+  const doneIds = Object.entries(clChecked)
+    .filter(([, v]) => v)
+    .map(([k]) => k);
+
+  if (doneIds.length === 0) {
+    alert('No items have been marked as fixed yet — nothing to save.');
+    return;
+  }
+
+  if (!fileObj) {
+    alert('Original course file not found — please re-upload your Canvas export and try again.');
+    return;
+  }
+
+  // Build a progress metadata object
+  const progress = {
+    version:    1,
+    savedAt:    new Date().toISOString(),
+    courseFile: fileObj.name,
+    canvasUrl:  canvasBaseUrl || '',
+    checkedIds: doneIds,
+  };
+
+  // Package the original course file + progress.json into a single zip
+  const pkg = new JSZip();
+  pkg.file(fileObj.name, fileObj);
+  pkg.file('accessibility_progress.json', JSON.stringify(progress, null, 2));
+
+  const blob = await pkg.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  const now = new Date();
+  const datePart = now.toISOString().slice(0, 10);
+  const timePart = now.toTimeString().slice(0, 8).replace(/:/g, '-');
+  const baseName = fileObj.name.replace(/\.(?:imscc|zip)$/i, '');
+  a.download = `${baseName}-progress-${datePart}-${timePart}.zip`;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// Holds IDs loaded from a progress file before the audit runs.
+let pendingRestoreIds = [];
+
+// Called when the user picks a progress package zip.
+// Extracts the embedded course file and progress JSON, pre-loads the Canvas
+// export into fileObj, and queues the checked IDs for restoration after audit.
+async function handleProgressRestore(file) {
+  try {
+    const pkg = await JSZip.loadAsync(file);
+
+    // Find the progress JSON
+    const progressFile = pkg.files['accessibility_progress.json'];
+    if (!progressFile) throw new Error('No progress data found in this file.');
+    const progressJson = await progressFile.async('string');
+    const data = JSON.parse(progressJson);
+    if (!data.checkedIds || !Array.isArray(data.checkedIds)) {
+      throw new Error('Unrecognised progress format.');
+    }
+
+    // Find the embedded Canvas course file
+    const courseFileName = data.courseFile || '';
+    const courseZipEntry = pkg.files[courseFileName] ||
+      Object.values(pkg.files).find(f =>
+        !f.dir && /\.(imscc|zip)$/i.test(f.name) && f.name !== file.name
+      );
+    if (!courseZipEntry) throw new Error('Could not find the course file inside this package.');
+
+    // Extract the course file and wrap it as a File object
+    const courseBlob = await courseZipEntry.async('blob');
+    const name = courseZipEntry.name.split('/').pop();
+    fileObj = new File([courseBlob], name, { type: 'application/zip' });
+
+    // Show the file info in the upload UI
+    document.getElementById('file-name').textContent = fileObj.name;
+    document.getElementById('file-size').textContent = (fileObj.size / 1024 / 1024).toFixed(2) + ' MB';
+    document.getElementById('file-preview').style.display = 'block';
+
+    // Restore the Canvas URL if it was saved
+    if (data.canvasUrl) {
+      document.getElementById('canvas-url-input').value = data.canvasUrl;
+    }
+
+    // Queue the checked IDs
+    pendingRestoreIds = data.checkedIds;
+
+    // Show confirmation
+    const tag = document.getElementById('progress-restore-name');
+    tag.style.display = 'inline-flex';
+    tag.style.alignItems = 'center';
+    tag.style.gap = '4px';
+    tag.textContent = `Progress loaded — ${data.checkedIds.length} item(s) will be restored`;
+
+  } catch(err) {
+    alert('Could not restore progress: ' + err.message + '\n\nMake sure you are uploading a file saved by the Save progress button.');
+    pendingRestoreIds = [];
+  }
+}
+
+// Applies any pending restore IDs after the audit has stamped its _clIds.
+// Called at the end of the audit runner, before renderResults.
+function applyPendingRestore() {
+  if (!pendingRestoreIds.length) return;
+  pendingRestoreIds.forEach(id => { clChecked[id] = true; });
+  pendingRestoreIds = [];
+}
+
 // ── Inline Fix Checklist ────────────────────────────────────────────────────
 // Simple key→done map; items identified by a stable hash of label+issue+index
 const clChecked = {};  // id → boolean

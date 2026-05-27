@@ -1036,6 +1036,48 @@ async function runAudit() {
     const xmlDoc = manifest ? parser.parseFromString(manifest, 'text/xml') : null;
 
     const { pageMap, moduleOrder, pageOrder } = parseManifest(xmlDoc);
+
+    // Read course_settings/module_meta.xml to get per-item workflow_state.
+    // This is the only reliable source of publish status in Canvas IMSCC exports.
+    // The file contains <module> elements with <items>, each with:
+    //   <identifierref> matching a resource id in the manifest
+    //   <workflow_state>unpublished</workflow_state> (or 'active' / 'published')
+    const moduleMeta = await getFile(zip, 'course_settings/module_meta.xml');
+    if (moduleMeta) {
+      const metaDoc = parser.parseFromString(moduleMeta, 'text/xml');
+      if (!metaDoc.querySelector('parsererror')) {
+        metaDoc.querySelectorAll('item').forEach(item => {
+          // Canvas uses <identifierref> on each item to link back to a resource
+          const refEl    = item.querySelector('identifierref');
+          const stateEl  = item.querySelector('workflow_state');
+          if (!refEl || !stateEl) return;
+          const ref   = refEl.textContent.trim();
+          const state = stateEl.textContent.trim().toLowerCase();
+          // Find the pageMap entry whose resource identifier matches this ref
+          // pageMap is keyed by path; we need to look up by identifier
+          // We built resourceHrefs in parseManifest but it's local — instead,
+          // we stored the path in pageMap, so iterate and match by looking up
+          // the reverse: path → check if any pageMap[path] was built from ref
+          // Since we don't have ref→path easily, we'll re-derive it here:
+          // The manifest's resourceHrefs[ref] gives us the path.
+          // We can rebuild this inline by scanning the manifest xml again.
+          if (xmlDoc) {
+            const resourceEl = xmlDoc.querySelector(`resource[identifier="${ref}"]`);
+            if (resourceEl) {
+              let path = resourceEl.getAttribute('href');
+              if (!path) {
+                const fileEl = resourceEl.querySelector('file');
+                if (fileEl) path = fileEl.getAttribute('href');
+              }
+              if (path && pageMap[path]) {
+                pageMap[path].published = !/unpublished|draft/i.test(state);
+              }
+            }
+          }
+        });
+      }
+    }
+
     const pages = await extractPages(zip, pageMap);
     setProgress(45, 'Scanning HTML content for accessibility issues...');
     await sleep(300);
@@ -1111,6 +1153,8 @@ function parseManifest(xmlDoc) {
 
   const resourceHrefs = {};
   const resourceTypes = {};
+  const resourcePublished = {};  // id → boolean
+
   xmlDoc.querySelectorAll('resource').forEach(r => {
     const id   = r.getAttribute('identifier');
     const type = r.getAttribute('type') || '';
@@ -1124,6 +1168,30 @@ function parseManifest(xmlDoc) {
     if (id && href) {
       resourceHrefs[id] = href;
       resourceTypes[id] = type;
+    }
+    // Detect publish status from Canvas-specific metadata on the resource element.
+    // Canvas may use: a namespaced attribute, a <workflow_state> child element,
+    // or a LOM lifecycle status with value "Draft".
+    if (id) {
+      let published = true;
+      for (const attr of Array.from(r.attributes)) {
+        const n = attr.localName.toLowerCase();
+        if ((n === 'published' || n === 'workflow_state') &&
+            /false|unpublished|draft/i.test(attr.value)) {
+          published = false;
+        }
+      }
+      r.querySelectorAll('*').forEach(el => {
+        const ln = (el.localName || el.tagName || '').toLowerCase();
+        if (ln === 'workflow_state' && /unpublished|draft/i.test(el.textContent.trim())) {
+          published = false;
+        }
+        if (ln === 'value' && /^draft$/i.test(el.textContent.trim())) {
+          const pn = ((el.parentElement && (el.parentElement.localName || el.parentElement.tagName)) || '').toLowerCase();
+          if (pn === 'status' || pn === 'lifecycle') published = false;
+        }
+      });
+      resourcePublished[id] = published;
     }
   });
 
@@ -1151,7 +1219,16 @@ function parseManifest(xmlDoc) {
             if (ref && resourceHrefs[ref]) {
               const path = resourceHrefs[ref];
               const isDiscussion = (resourceTypes[ref] || '').includes('imsdt');
-              pageMap[path] = { moduleName, pageTitle, isDiscussion };
+              // Also check the <item> element itself for any publish attributes
+              let published = resourcePublished[ref] !== false;
+              for (const attr of Array.from(pageItem.attributes)) {
+                const n = attr.localName.toLowerCase();
+                if ((n === 'published' || n === 'workflow_state') &&
+                    /false|unpublished|draft/i.test(attr.value)) {
+                  published = false;
+                }
+              }
+              pageMap[path] = { moduleName, pageTitle, isDiscussion, published };
               pageOrder[moduleName].push(path);
             }
           });
@@ -1179,14 +1256,15 @@ async function extractPages(zip, pageMap) {
       const fileName = parts[parts.length - 1].replace(/\.html?$/i, '');
       const entry = map[key];
       pages.push({
-        path: key,
-        name:   entry ? (entry.pageTitle || fileName) : fileName,
+        path:      key,
+        name:      entry ? (entry.pageTitle || fileName) : fileName,
         content,
-        module: entry
+        module:    entry
           ? entry.moduleName
           : (manifestPresent ? 'Not attached to a module' : inferModule(key)),
         inManifest: !!entry,
-        type: 'page'
+        published: entry ? (entry.published !== false) : true,
+        type:      'page'
       });
     } catch(e) {}
   }
@@ -1211,11 +1289,12 @@ async function extractPages(zip, pageMap) {
         // Empty discussion — still add it so it shows in module view
         pages.push({
           path,
-          name:   entry.pageTitle || path.split('/').pop().replace(/\.xml$/i, ''),
-          content: '<html><head><title>' + (entry.pageTitle || '') + '</title></head><body></body></html>',
-          module: entry.moduleName,
+          name:      entry.pageTitle || path.split('/').pop().replace(/\.xml$/i, ''),
+          content:   '<html><head><title>' + (entry.pageTitle || '') + '</title></head><body></body></html>',
+          module:    entry.moduleName,
           inManifest: true,
-          type: 'discussion'
+          published: entry.published !== false,
+          type:      'discussion'
         });
         continue;
       }
@@ -1225,11 +1304,12 @@ async function extractPages(zip, pageMap) {
       const content = `<html><head><title>${entry.pageTitle || ''}</title></head><body>${resolvedHtml}</body></html>`;
       pages.push({
         path,
-        name:   entry.pageTitle || path.split('/').pop().replace(/\.xml$/i, ''),
+        name:      entry.pageTitle || path.split('/').pop().replace(/\.xml$/i, ''),
         content,
-        module: entry.moduleName,
+        module:    entry.moduleName,
         inManifest: true,
-        type: 'discussion'
+        published: entry.published !== false,
+        type:      'discussion'
       });
     } catch(e) {}
   }
@@ -1427,7 +1507,7 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOr
     const moduleName = page.inManifest ? page.module : UNATTACHED_KEY;
 
     if (!pageFindings[page.path]) {
-      pageFindings[page.path] = { moduleName, pageName: page.name, pagePath: page.path, pageType: page.type || 'page', pageUrl: pageUrl(page.path, page.type), findings: [] };
+      pageFindings[page.path] = { moduleName, pageName: page.name, pagePath: page.path, pageType: page.type || 'page', pageUrl: pageUrl(page.path, page.type), published: page.published !== false, findings: [] };
     }
     const pf = pageFindings[page.path];
 
@@ -1654,7 +1734,7 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOr
   for (const [path, pf] of Object.entries(pageFindings)) {
     const key = pf.moduleName;
     if (!results.byModule[key]) results.byModule[key] = [];
-    results.byModule[key].push({ pageName: pf.pageName, pagePath: pf.pagePath, pageType: pf.pageType, pageUrl: pf.pageUrl, findings: pf.findings });
+    results.byModule[key].push({ pageName: pf.pageName, pagePath: pf.pagePath, pageType: pf.pageType, pageUrl: pf.pageUrl, published: pf.published, findings: pf.findings });
   }
 
   const videoFiles = mediaFiles.filter(f => /\.(mp4|mov|avi|webm)$/i.test(f));
@@ -2204,7 +2284,7 @@ function renderPageBlock(page, pid) {
 
   return `<div class="page-block">
     <div class="page-hdr" onclick="togglePage('${pid}')">
-      <h4>${smallIcon} ${escHtml(page.pageName)} ${typeTag} ${linkHtml}</h4>
+      <h4>${smallIcon} ${escHtml(page.pageName)} ${typeTag} ${linkHtml}${page.published === false ? '<span style="font-size:11px;font-style:italic;font-weight:400;color:var(--c-ink-ghost);margin-left:4px">Unpublished</span>' : ''}</h4>
       <div style="display:flex;align-items:center;gap:6px">
         <div class="badges">${badgesHtml}</div>
         <span class="chevron" id="chev-${pid}" style="font-size:9px">▼</span>

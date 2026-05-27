@@ -1011,7 +1011,16 @@ function setView(v) {
   currentView = v;
   document.getElementById('view-checks-btn').classList.toggle('active', v === 'checks');
   document.getElementById('view-modules-btn').classList.toggle('active', v === 'modules');
+  // Restore the active filter button to match currentFilter
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent.trim() === filterLabel(currentFilter));
+  });
   renderResults();
+}
+
+// Maps a filter key to its button label for restoring active state.
+function filterLabel(f) {
+  return { all: 'All', fail: 'Issues only', warn: 'Manual checks', pass: 'Passed' }[f] || 'All';
 }
 
 // ── Audit runner ─────────────────────────────────────────────────────────────
@@ -1946,7 +1955,7 @@ function filterResults(f, btn) {
   currentFilter = f;
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  if (auditData) renderSections();
+  if (auditData) renderResults();
 }
 
 // ── Render dispatcher ────────────────────────────────────────────────────────
@@ -2218,21 +2227,32 @@ function renderModuleView() {
   }
 
   keys.forEach((key, mi) => {
-    const pages = sortedModulePages(key, auditData.byModule[key]);
+    const allPages = sortedModulePages(key, auditData.byModule[key]);
+    // Filter pages to only those that have at least one finding matching the filter
+    const pages = currentFilter === 'all'
+      ? allPages
+      : allPages.filter(p => p.findings.some(f => f.status === currentFilter));
+    if (pages.length === 0) return;  // skip modules with nothing to show
+
     const isUnattached = key === UNATTACHED_KEY;
     const displayName = isUnattached ? 'Not attached to a module' : key;
-    const stats = moduleStats(pages);
     const moduleId = `mod-${mi}`;
+
+    // Recompute badge counts based on the filtered pages only
+    let filtFail = 0, filtWarn = 0, filtPass = 0;
+    pages.forEach(p => p.findings.forEach(f => {
+      if (f.status === 'fail') filtFail++;
+      else if (f.status === 'warn') filtWarn++;
+      else filtPass++;
+    }));
+    const badgesHtml = [
+      filtFail > 0 ? `<span class="badge badge-fail">${filtFail} issue${filtFail>1?'s':''}</span>` : '',
+      filtWarn > 0 ? `<span class="badge badge-warn">${filtWarn} manual</span>` : '',
+      filtPass > 0 ? `<span class="badge badge-pass">${filtPass} pass</span>` : '',
+    ].join('');
 
     const div = document.createElement('div');
     div.className = 'module-block' + (isUnattached ? ' unattached' : '');
-
-    const badgesHtml = [
-      stats.fail > 0  ? `<span class="badge badge-fail">${stats.fail} issue${stats.fail>1?'s':''}</span>` : '',
-      stats.warn > 0  ? `<span class="badge badge-warn">${stats.warn} manual</span>` : '',
-      stats.pass > 0  ? `<span class="badge badge-pass">${stats.pass} pass</span>` : '',
-    ].join('');
-
     div.innerHTML = `
       <div class="module-hdr" style="cursor:default">
         <div class="module-name">
@@ -2242,18 +2262,30 @@ function renderModuleView() {
         <div class="badges">${badgesHtml}</div>
       </div>
       <div class="module-pages" id="body-${moduleId}">
-        ${pages.map((p, pi) => renderPageBlock(p, `${moduleId}-p${pi}`)).join('')}
+        ${pages.map((p, pi) => renderPageBlock(p, `${moduleId}-p${pi}`, currentFilter)).join('')}
       </div>`;
     body.appendChild(div);
   });
 }
 
-function renderPageBlock(page, pid) {
-  const failCt = page.findings.filter(f => f.status === 'fail').length;
-  const warnCt = page.findings.filter(f => f.status === 'warn').length;
-  const passCt = page.findings.filter(f => f.status === 'pass').length;
+function renderPageBlock(page, pid, filter) {
+  // filter defaults to 'all' if not passed
+  const activeFilter = filter || 'all';
 
-  const overallStatus = failCt > 0 ? 'fail' : warnCt > 0 ? 'warn' : 'pass';
+  // Filter findings to only those matching the active filter
+  const visibleFindings = activeFilter === 'all'
+    ? page.findings
+    : page.findings.filter(f => f.status === activeFilter);
+
+  // Badge counts based on visible findings only
+  const filteredFail = visibleFindings.filter(f => f.status === 'fail').length;
+  const filteredWarn = visibleFindings.filter(f => f.status === 'warn').length;
+  const filteredPass = visibleFindings.filter(f => f.status === 'pass').length;
+
+  const overallStatus = filteredFail > 0 ? 'fail' : filteredWarn > 0 ? 'warn' : filteredPass > 0 ? 'pass'
+    : page.findings.some(f => f.status === 'fail') ? 'fail'
+    : page.findings.some(f => f.status === 'warn') ? 'warn' : 'pass';
+
   const smallIcon = {
     pass: `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#dcfce7" stroke="#16a34a" stroke-width="1.25"/><path d="M5.5 9l2.5 2.5 4.5-4.5" stroke="#16a34a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
     fail: `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#fee2e2" stroke="#dc2626" stroke-width="1.25"/><path d="M6 6l6 6M12 6l-6 6" stroke="#dc2626" stroke-width="1.6" stroke-linecap="round"/></svg>`,
@@ -2261,12 +2293,12 @@ function renderPageBlock(page, pid) {
   }[overallStatus];
 
   const badgesHtml = [
-    failCt > 0 ? `<span class="badge badge-fail">${failCt} issue${failCt>1?'s':''}</span>` : '',
-    warnCt > 0 ? `<span class="badge badge-warn">${warnCt} manual</span>` : '',
-    passCt > 0 ? `<span class="badge badge-pass">${passCt} pass</span>` : '',
+    filteredFail > 0 ? `<span class="badge badge-fail">${filteredFail} issue${filteredFail>1?'s':''}</span>` : '',
+    filteredWarn > 0 ? `<span class="badge badge-warn">${filteredWarn} manual</span>` : '',
+    filteredPass > 0 ? `<span class="badge badge-pass">${filteredPass} pass</span>` : '',
   ].join('');
 
-  const findingsHtml = page.findings.map(f => renderFinding(f)).join('');
+  const findingsHtml = visibleFindings.map(f => renderFinding(f)).join('');
 
   const typeTag = '';
 
@@ -2282,16 +2314,20 @@ function renderPageBlock(page, pid) {
        </a>`
     : '';
 
+  const unpublishedTag = page.published === false
+    ? `<span style="font-size:11px;font-style:italic;font-weight:400;color:var(--c-ink-ghost);margin-left:4px">Unpublished</span>`
+    : '';
+
   return `<div class="page-block">
     <div class="page-hdr" onclick="togglePage('${pid}')">
-      <h4>${smallIcon} ${escHtml(page.pageName)} ${typeTag} ${linkHtml}${page.published === false ? '<span style="font-size:11px;font-style:italic;font-weight:400;color:var(--c-ink-ghost);margin-left:4px">Unpublished</span>' : ''}</h4>
+      <h4>${smallIcon} ${escHtml(page.pageName)} ${typeTag} ${linkHtml}${unpublishedTag}</h4>
       <div style="display:flex;align-items:center;gap:6px">
         <div class="badges">${badgesHtml}</div>
         <span class="chevron" id="chev-${pid}" style="font-size:9px">▼</span>
       </div>
     </div>
     <div class="page-body" id="body-${pid}" style="display:none">
-      ${findingsHtml || '<div style="font-size:12px;color:var(--c-ink-muted);padding:.3rem 0">No findings recorded for this page.</div>'}
+      ${findingsHtml}
     </div>
   </div>`;
 }

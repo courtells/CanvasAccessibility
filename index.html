@@ -688,6 +688,29 @@ body{
   margin-bottom: .5rem;
 }
 .category-heading:first-child{ margin-top: 0; }
+
+/* ── Ignore feature ───────────────────────────────────────────────────────── */
+.badge-ignore{background:var(--c-surface-3);color:var(--c-ink-ghost)}
+.check-item.is-ignored{opacity:.45}
+.finding-row.is-ignored{opacity:.45}
+
+/* Per-issue done/ignored states — strikethrough, full opacity, visible */
+.issue-item.is-done,.warn-item.is-done,.mod-issue-item.is-done,.mod-warn-item.is-done{background:var(--c-surface-2)!important;border-left-color:var(--c-pass)!important}
+.issue-item.is-done .issue-desc,.issue-item.is-done .issue-loc,.issue-item.is-done .issue-fix,
+.warn-item.is-done .issue-desc,.warn-item.is-done .issue-loc,.warn-item.is-done .issue-fix,
+.mod-issue-item.is-done .cl-inline-text,.mod-warn-item.is-done .cl-inline-text,
+.mod-issue-item.is-done .fix,.mod-warn-item.is-done .fix{text-decoration:line-through;color:var(--c-ink-ghost)}
+.issue-item.is-ignored,.warn-item.is-ignored,.mod-issue-item.is-ignored,.mod-warn-item.is-ignored{background:var(--c-surface-2)!important;border-left-color:var(--c-ink-ghost)!important}
+.issue-item.is-ignored .issue-desc,.issue-item.is-ignored .issue-loc,.issue-item.is-ignored .issue-fix,
+.warn-item.is-ignored .issue-desc,.warn-item.is-ignored .issue-loc,.warn-item.is-ignored .issue-fix,
+.mod-issue-item.is-ignored .cl-inline-text,.mod-warn-item.is-ignored .cl-inline-text,
+.mod-issue-item.is-ignored .fix,.mod-warn-item.is-ignored .fix{text-decoration:line-through;color:var(--c-ink-ghost)}
+.issue-actions{display:flex;gap:6px;margin-top:7px;flex-wrap:wrap}
+.check-actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.check-action-btn{font-size:12px;padding:3px 10px;border-radius:100px;border:1px solid var(--c-border-strong);background:white;cursor:pointer;font-family:var(--font-body);font-weight:500;color:var(--c-ink-soft);transition:all .15s;box-shadow:var(--shadow-xs);letter-spacing:-.1px}
+.check-action-btn:hover{background:var(--c-surface);box-shadow:var(--shadow-sm)}
+.check-action-btn.complete{color:var(--c-pass);border-color:var(--c-pass)}
+.check-action-btn.complete:hover{background:var(--c-pass-bg)}
 </style>
 
 <div id="app">
@@ -838,6 +861,7 @@ body{
         <button class="filter-btn" onclick="filterResults('fail',this)">Issues only</button>
         <button class="filter-btn" onclick="filterResults('warn',this)">Manual checks</button>
         <button class="filter-btn" onclick="filterResults('pass',this)">Passed</button>
+        <button class="filter-btn" onclick="filterResults('ignore',this)">Ignored</button>
       </div>
     </div>
 
@@ -967,6 +991,7 @@ let fileObj      = null;  // The uploaded File object
 let canvasBaseUrl = '';   // Optional base URL entered by faculty; enables direct page links
 let currentFilter = 'all';       // Active filter: 'all' | 'fail' | 'warn' | 'pass'
 let currentView   = 'modules';   // Active view: 'modules' | 'checks'
+let findingMap    = {};  // _fId → finding object, for module-view mark-complete/ignore
 
 // Derive a Canvas page URL from the exported file path and the user-supplied base URL.
 // HTML pages use /pages/slug; discussion XML files use /discussion_topics/ (no reliable
@@ -1065,7 +1090,9 @@ function closeConfirmModal() {
 
 function resetTool() {
   closeConfirmModal();
-  fileObj = null; auditData = null; canvasBaseUrl = '';
+  fileObj = null; auditData = null; canvasBaseUrl = ''; findingMap = {};
+  Object.keys(clChecked).forEach(k => delete clChecked[k]);
+  Object.keys(issueIgnored).forEach(k => delete issueIgnored[k]);
   Object.keys(clChecked).forEach(k => delete clChecked[k]);
   pendingRestoreIds = [];
   document.getElementById('progress-restore-name').style.display = 'none';
@@ -1107,7 +1134,7 @@ function setView(v) {
 
 // Maps a filter key to its button label for restoring active state.
 function filterLabel(f) {
-  return { all: 'All', fail: 'Issues only', warn: 'Manual checks', pass: 'Passed' }[f] || 'All';
+  return { all: 'All', fail: 'Issues only', warn: 'Manual checks', pass: 'Passed', ignore: 'Ignored' }[f] || 'All';
 }
 
 // ── Audit runner ─────────────────────────────────────────────────────────────
@@ -1238,6 +1265,18 @@ async function runAudit() {
             chk._clId = 'cl' + (_clStamp++);
           }
         })
+      );
+    }
+
+    // Stamp each finding in byModule with a unique _fId for module-view overrides
+    findingMap = {};
+    let _fStamp = 0;
+    if (auditData.byModule) {
+      Object.values(auditData.byModule).forEach(pages =>
+        pages.forEach(p => p.findings.forEach(f => {
+          if (!f._fId) { f._fId = 'fi' + (_fStamp++); }
+          findingMap[f._fId] = f;
+        }))
       );
     }
 
@@ -1469,6 +1508,16 @@ function looksLikeUrl(txt) {
          /^\S+\.(com|org|edu|gov|net|io)(\/\S*)?$/i.test(txt);
 }
 
+// ── Text snippet helper ───────────────────────────────────────────────────────
+// Returns the first n words of a string formatted as "word1 word2 word3…" (with
+// trailing ellipsis when the string has more words). Returns '' if no text.
+function firstWords(text, n = 3) {
+  const words = (text || '').trim().replace(/\s+/g, ' ').split(' ').filter(Boolean);
+  if (!words.length) return '';
+  const slice = words.slice(0, n).join(' ');
+  return words.length > n ? `"${slice}…"` : `"${slice}"`;
+}
+
 // ── Color contrast engine ────────────────────────────────────────────────────
 const CSS_NAMED_COLORS = {
   aliceblue:'#f0f8ff',antiquewhite:'#faebd7',aqua:'#00ffff',aquamarine:'#7fffd4',
@@ -1601,10 +1650,11 @@ function checkPageContrast(doc, loc, url) {
     const label = large ? 'large text (≥18pt / ≥14pt bold)' : 'normal text';
 
     if (ratio < threshold) {
+      const snippet = firstWords(el.textContent, 3);
       issues.push({
         loc,
         url,
-        issue: `Contrast ratio ${ratio.toFixed(2)}:1 — below ${threshold}:1 required for ${label}. Foreground: ${toHex(fg)}, Background: ${toHex(bg)}.`,
+        issue: `Contrast ratio ${ratio.toFixed(2)}:1 — below ${threshold}:1 required for ${label}${snippet ? ` near ${snippet}` : ''}. Foreground: ${toHex(fg)}, Background: ${toHex(bg)}.`,
         fix: `The text color (${toHex(fg)}) doesn't have enough contrast against its background (${toHex(bg)}) — current ratio is ${ratio.toFixed(2)}:1, but ${threshold}:1 is required. In Canvas, open the page editor, select the text, and choose a darker font color or a lighter background color. Use the WebAIM Contrast Checker (webaim.org/resources/contrastchecker) to test your new colors before saving.`,
         fgHex: toHex(fg),
         bgHex: toHex(bg),
@@ -1676,7 +1726,7 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOr
       wcag: 'WCAG 2.4.2 Level A',
       status: titleMissing ? 'fail' : 'pass',
       title: titleMissing ? 'Missing descriptive title' : 'Descriptive title present',
-      issues: titleMissing ? [{ issue: 'Page has no descriptive title tag', fix: 'Add a unique, descriptive <title> that reflects the page content.' }] : []
+      issues: titleMissing ? [{ loc, url: pUrl, issue: 'Page has no descriptive title tag', fix: 'Add a unique, descriptive <title> that reflects the page content.' }] : []
     });
 
     // ── Images ───────────────────────────────────────────────────────────────
@@ -1747,7 +1797,7 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOr
           if (!altMatch) {
             rawIssues.push({ issue: `Image missing alt attribute (src: ${srcName})`, fix: 'In Canvas, click the image in the page editor, then select "Alt Text" (or the image properties icon). Type a brief description of what the image shows — for example, "Bar chart showing student survey results from Fall 2023." If the image is purely decorative (like a divider or background), check the "Decorative image" box instead.' });
           } else if (altMatch[1].length > 0 && looksLikeFilename(altMatch[1].trim())) {
-            rawIssues.push({ issue: `Alt text appears to be a filename: "${altMatch[1].substring(0, 60)}"`, fix: 'The alt text currently contains a file name rather than a real description. In Canvas, click the image in the editor and update the Alt Text field with a sentence describing what the image actually shows, such as \"Diagram of the water cycle showing evaporation and precipitation.\"' });
+            rawIssues.push({ issue: `Alt text appears to be a filename: "${altMatch[1].substring(0, 60)}"`, fix: 'The alt text currently contains a file name rather than a real description. In Canvas, click the image in the editor and update the Alt Text field with a sentence describing what the image actually shows, such as "Diagram of the water cycle showing evaporation and precipitation."' });
           }
         });
         if (rawIssues.length > 0) {
@@ -1798,11 +1848,15 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOr
       const headers = tbl.querySelectorAll('th');
       const scope = Array.from(headers).some(h => h.getAttribute('scope'));
       if (!headers.length) {
-        const issue = { loc, url: pUrl, issue: 'Data table found with no <th> header cells', fix: 'This table is missing header labels. In the Canvas rich-text editor, click inside the table, then use the Table menu to designate the first row (or column) as a header row. This helps screen readers announce which column or row each cell belongs to, so students with disabilities can navigate the table.' };
+        const firstCell = tbl.querySelector('td');
+        const snippet = firstCell ? firstWords(firstCell.textContent, 3) : '';
+        const issue = { loc, url: pUrl, issue: `Data table found with no <th> header cells${snippet ? ` (first cell: ${snippet})` : ''}`, fix: 'This table is missing header labels. In the Canvas rich-text editor, click inside the table, then use the Table menu to designate the first row (or column) as a header row. This helps screen readers announce which column or row each cell belongs to, so students with disabilities can navigate the table.' };
         tableIssues.push(issue);
         pageTableIssues.push({ loc, url: pUrl, issue: issue.issue, fix: issue.fix });
       } else if (!scope) {
-        const issue = { loc, url: pUrl, issue: 'Table has <th> headers but no scope attribute', fix: 'The table has header cells but they\'re missing a "scope" attribute that tells screen readers whether each header applies to a column or a row. If you built the table in the Canvas editor using the header row option, this may have been omitted automatically — try deleting and rebuilding the table using the Canvas table tool, or contact your instructional designer for help adding scope attributes in the HTML source.' };
+        const firstHeader = tbl.querySelector('th');
+        const snippet = firstHeader ? firstWords(firstHeader.textContent, 3) : '';
+        const issue = { loc, url: pUrl, issue: `Table has <th> headers but no scope attribute${snippet ? ` (first header: ${snippet})` : ''}`, fix: 'The table has header cells but they\'re missing a "scope" attribute that tells screen readers whether each header applies to a column or a row. If you built the table in the Canvas editor using the header row option, this may have been omitted automatically — try deleting and rebuilding the table using the Canvas table tool, or contact your instructional designer for help adding scope attributes in the HTML source.' };
         tableIssues.push(issue);
         pageTableIssues.push({ loc, url: pUrl, issue: issue.issue, fix: issue.fix });
       }
@@ -2093,11 +2147,38 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOr
   return results;
 }
 
+// ── Filter helpers ────────────────────────────────────────────────────────────
+// Returns true if a check (By Check Type view) matches the active filter.
+// 'ignore' checks issueIgnored at the issue level since no check.status is ever 'ignore'.
+function checkMatchesFilter(c, filter) {
+  if (filter === 'all') return true;
+  if (filter === 'ignore') {
+    return (c.issues || []).some(iss => iss._clId && issueIgnored[iss._clId]) ||
+           !!(c._clId && issueIgnored[c._clId]);
+  }
+  return c.status === filter;
+}
+
+// Returns true if a finding (By Module view) matches the active filter.
+function findingMatchesFilter(f, filter) {
+  if (filter === 'all') return true;
+  if (filter === 'ignore') {
+    return (f.issues || []).some(iss => iss._clId && issueIgnored[iss._clId]) ||
+           !!(f._clId && issueIgnored[f._clId]);
+  }
+  return f.status === filter;
+}
+
 // ── Filter ───────────────────────────────────────────────────────────────────
 function filterResults(f, btn) {
   currentFilter = f;
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+  // Manual checks only exist in the By Check Type view — auto-switch if needed
+  if (f === 'warn' && currentView === 'modules') {
+    setView('checks');
+    return; // setView calls renderResults
+  }
   if (auditData) renderResults();
 }
 
@@ -2154,7 +2235,7 @@ function renderSections() {
     if (!sections || !sections.length) continue;
 
     const anyVisible = sections.some(sec =>
-      sec.checks.some(c => currentFilter === 'all' || c.status === currentFilter)
+      sec.checks.some(c => checkMatchesFilter(c, currentFilter))
     );
     if (!anyVisible) continue;
 
@@ -2191,12 +2272,13 @@ function renderSections() {
 
     // Each section renders as a page-block nested inside the category
     for (const sec of sections) {
-      const anyMatch = sec.checks.some(c => currentFilter === 'all' || c.status === currentFilter);
+      const anyMatch = sec.checks.some(c => checkMatchesFilter(c, currentFilter));
       if (!anyMatch) continue;
 
       const failCt = sec.checks.filter(c => c.status === 'fail').length;
       const warnCt = sec.checks.filter(c => c.status === 'warn').length;
       const passCt = sec.checks.filter(c => c.status === 'pass').length;
+      const ignoreCt = sec.checks.filter(c => c.status === 'ignore').length;
 
       const overallStatus = failCt > 0 ? 'fail' : warnCt > 0 ? 'warn' : 'pass';
       const smallIcon = {
@@ -2209,6 +2291,7 @@ function renderSections() {
         passCt > 0 ? `<span class="badge badge-pass">${passCt} pass</span>` : '',
         failCt > 0 ? `<span class="badge badge-fail">${failCt} issue${failCt>1?'s':''}</span>` : '',
         warnCt > 0 ? `<span class="badge badge-warn">${warnCt} manual</span>` : '',
+        ignoreCt > 0 ? `<span class="badge badge-ignore">${ignoreCt} ignored</span>` : '',
       ].join('');
 
       const div = document.createElement('div');
@@ -2222,14 +2305,18 @@ function renderSections() {
           </div>
         </div>
         <div class="page-body section-body" id="body-${sec.id}" style="display:none">
-          ${sec.checks.map(c => renderCheck(c)).join('')}
+          ${sec.checks.map((c, ci) => renderCheck(c, sec.id, ci)).join('')}
         </div>`;
       catBody.appendChild(div);
     }
   }
 }
 
-function renderCheck(c) {
+function renderCheck(c, secId, checkIdx) {
+  const ignoreIcon = `<svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+    <circle cx="9" cy="9" r="8.25" fill="#f3f4f6" stroke="#9ca3af" stroke-width="1.25"/>
+    <path d="M5.5 9h7" stroke="#9ca3af" stroke-width="1.6" stroke-linecap="round"/>
+  </svg>`;
   const icons = {
     pass: `<svg width="18" height="18" viewBox="0 0 18 18" fill="none">
       <circle cx="9" cy="9" r="8.25" fill="#dcfce7" stroke="#16a34a" stroke-width="1.25"/>
@@ -2245,11 +2332,22 @@ function renderCheck(c) {
       <circle cx="9" cy="12.5" r=".9" fill="#d97706"/>
     </svg>`
   };
-  const icon = icons[c.status] || icons.warn;
+  const icon = c.status === 'ignore' ? ignoreIcon : (icons[c.status] || icons.warn);
 
-  const issueHtml = (c.issues||[]).map((i, idx) => {
-    // Media file listing rows (no fix text, loc = folder, issue = filename)
+  // Helper: render buttons inside an issue card
+  function issueButtons(id) {
+    const done = !!clChecked[id], ign = !!issueIgnored[id];
+    if (done) return `<div class="issue-actions"><button class="check-action-btn" onclick="undoIssueOverride('${id}')">↩ Undo</button></div>`;
+    if (ign)  return `<div class="issue-actions"><button class="check-action-btn" onclick="undoIssueOverride('${id}')">↩ Undo ignore</button></div>`;
+    return `<div class="issue-actions"><button class="check-action-btn complete" onclick="markIssueComplete('${id}')">✓ Mark complete</button><button class="check-action-btn" onclick="markIssueIgnore('${id}')">Ignore</button></div>`;
+  }
+  function issueStateClass(id) {
+    if (clChecked[id]) return ' is-done';
+    if (issueIgnored[id]) return ' is-ignored';
+    return '';
+  }
 
+  const issueHtml = (c.status !== 'ignore') ? (c.issues||[]).map(i => {
     const swatchHtml = (i.fgHex && i.bgHex)
       ? `<div class="contrast-swatch">
            <span class="swatch-box" style="background:${i.bgHex}" title="Background: ${i.bgHex}"></span>
@@ -2270,47 +2368,118 @@ function renderCheck(c) {
            <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1.5 8.5l7-7M8.5 1.5H4M8.5 1.5v4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
          </a>`
       : `<span class="issue-loc">${escHtml(i.loc||'Manual check')}</span>`;
-    const itemId = i._clId;
-    const isDone = clIsChecked(itemId);
-    return `<div class="${c.status==='fail'?'issue-item':'warn-item'} cl-inline-item${isDone ? ' cl-inline-done' : ''}" id="cli-${itemId}" onclick="clInlineToggle('${itemId}', event)" role="checkbox" aria-checked="${isDone}" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){clInlineToggle('${itemId}', event)}">
-      <div style="display:flex;align-items:flex-start;gap:8px">
-        <div class="cl-inline-check${isDone ? ' cl-inline-checked' : ''}" aria-hidden="true" style="margin-top:2px;flex-shrink:0">
-          ${isDone ? '<svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}
-        </div>
-        <div style="flex:1;min-width:0">
-          ${locHtml}
-          <div class="issue-desc cl-inline-text">${i.issue}</div>
-          ${swatchHtml}
-          ${i.fix?`<div class="issue-fix">Suggestion: ${i.fix}</div>`:''}
-        </div>
-      </div>
+    const id = i._clId;
+    return `<div class="${c.status==='fail'?'issue-item':'warn-item'}${issueStateClass(id)}" id="iss-${id}">
+      ${locHtml}
+      <div class="issue-desc">${i.issue}</div>
+      ${swatchHtml}
+      ${i.fix?`<div class="issue-fix">Suggestion: ${i.fix}</div>`:''}
+      ${issueButtons(id)}
     </div>`;
-  }).join('');
+  }).join('') : '';
 
-  // Manual check row (no sub-issues, warn/fail status)
+  // Manual check row (no sub-issues) — buttons inside the card
   let manualCheck = '';
-  if ((c.issues||[]).length === 0 && (c.status === 'fail' || c.status === 'warn')) {
-    const itemId = c._clId;
-    const isDone = clIsChecked(itemId);
-    manualCheck = `<div class="warn-item cl-inline-item${isDone ? ' cl-inline-done' : ''}" id="cli-${itemId}" onclick="clInlineToggle('${itemId}', event)" role="checkbox" aria-checked="${isDone}" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){clInlineToggle('${itemId}', event)}" style="margin-top:.35rem">
-      <div style="display:flex;align-items:center;gap:8px">
-        <div class="cl-inline-check${isDone ? ' cl-inline-checked' : ''}" aria-hidden="true" style="flex-shrink:0">
-          ${isDone ? '<svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}
-        </div>
-        <span class="cl-inline-text" style="font-size:11.5px;font-style:italic;color:var(--c-ink-muted)">Mark as reviewed</span>
-      </div>
+  if (c.status !== 'ignore' && (c.issues||[]).length === 0 && (c.status === 'fail' || c.status === 'warn')) {
+    const id = c._clId;
+    manualCheck = `<div class="warn-item${issueStateClass(id)}" id="iss-${id}" style="margin-top:.35rem">
+      <span style="font-size:13px;font-style:italic;color:var(--c-ink-muted)">Manual review required</span>
+      ${issueButtons(id)}
     </div>`;
   }
 
-  return `<div class="check-item">
+  const ignoredClass = c.status === 'ignore' ? ' is-ignored' : '';
+
+  return `<div class="check-item${ignoredClass}" data-status="${c.status}">
     <div class="status-icon">${icon}</div>
     <div>
       <div class="check-title">${c.title}</div>
       ${c.detail?`<div class="check-detail">${c.detail}</div>`:''}
-      <div class="check-wcag">${c.wcag}</div>
+      <div class="check-wcag">${c.wcag}${c.status === 'ignore' ? ' · <em style="color:var(--c-ink-ghost)">Ignored</em>' : ''}</div>
       ${issueHtml}${manualCheck}
     </div>
   </div>`;
+}
+
+// ── Ignore / complete overrides (By Module view) ──────────────────────────────
+// Switches the active filter to "All" and updates button state.
+// Called whenever an override action is taken so the result stays visible.
+function resetToAllFilter() {
+  currentFilter = 'all';
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent.trim() === 'All');
+  });
+}
+
+function markFindingComplete(fId) {
+  const f = findingMap[fId];
+  if (!f) return;
+  f._prevStatus = f.status;
+  f._prevIssues = [...(f.issues || [])];
+  f._wasOverridden = true;
+  f.status = 'pass';
+  f.issues = [];
+  resetToAllFilter();
+  renderResults();
+}
+
+function markFindingIgnore(fId) {
+  const f = findingMap[fId];
+  if (!f) return;
+  f._prevStatus = f.status;
+  f._prevIssues = [...(f.issues || [])];
+  f._wasOverridden = true;
+  f.status = 'ignore';
+  resetToAllFilter();
+  renderResults();
+}
+
+function undoFindingOverride(fId) {
+  const f = findingMap[fId];
+  if (!f || !f._wasOverridden) return;
+  f.status = f._prevStatus;
+  f.issues = f._prevIssues || [];
+  f._wasOverridden = false;
+  renderResults();
+}
+
+// ── Ignore / complete overrides (By Check Type view) ─────────────────────────
+function markCheckComplete(secId, checkIdx) {
+  const sec = auditData && auditData.sections && auditData.sections.find(s => s.id === secId);
+  if (!sec) return;
+  const chk = sec.checks[checkIdx];
+  if (!chk) return;
+  chk._prevStatus = chk.status;
+  chk._prevIssues = [...(chk.issues || [])];
+  chk._wasOverridden = true;
+  chk.status = 'pass';
+  chk.issues = [];
+  resetToAllFilter();
+  renderResults();
+}
+
+function markCheckIgnore(secId, checkIdx) {
+  const sec = auditData && auditData.sections && auditData.sections.find(s => s.id === secId);
+  if (!sec) return;
+  const chk = sec.checks[checkIdx];
+  if (!chk) return;
+  chk._prevStatus = chk.status;
+  chk._prevIssues = [...(chk.issues || [])];
+  chk._wasOverridden = true;
+  chk.status = 'ignore';
+  resetToAllFilter();
+  renderResults();
+}
+
+function undoCheckOverride(secId, checkIdx) {
+  const sec = auditData && auditData.sections && auditData.sections.find(s => s.id === secId);
+  if (!sec) return;
+  const chk = sec.checks[checkIdx];
+  if (!chk || !chk._wasOverridden) return;
+  chk.status = chk._prevStatus;
+  chk.issues = chk._prevIssues || [];
+  chk._wasOverridden = false;
+  renderResults();
 }
 
 function toggleSection(id) {
@@ -2354,15 +2523,16 @@ function sortedModulePages(moduleName, pages) {
 }
 
 function moduleStats(pages) {
-  let fail=0, warn=0, pass=0;
+  let fail=0, warn=0, pass=0, ignore=0;
   for (const p of pages) {
     for (const f of p.findings) {
-      if (f.status === 'fail') fail++;
+      if (f.status === 'ignore') ignore++;
+      else if (f.status === 'fail') fail++;
       else if (f.status === 'warn') warn++;
       else pass++;
     }
   }
-  return {fail, warn, pass};
+  return {fail, warn, pass, ignore};
 }
 
 function renderModuleView() {
@@ -2380,7 +2550,7 @@ function renderModuleView() {
     // Filter pages to only those that have at least one finding matching the filter
     const pages = currentFilter === 'all'
       ? allPages
-      : allPages.filter(p => p.findings.some(f => f.status === currentFilter));
+      : allPages.filter(p => p.findings.some(f => findingMatchesFilter(f, currentFilter)));
     if (pages.length === 0) return;  // skip modules with nothing to show
 
     const isUnattached = key === UNATTACHED_KEY;
@@ -2388,9 +2558,10 @@ function renderModuleView() {
     const moduleId = `mod-${mi}`;
 
     // Recompute badge counts based on the filtered pages only
-    let filtFail = 0, filtWarn = 0, filtPass = 0;
+    let filtFail = 0, filtWarn = 0, filtPass = 0, filtIgnore = 0;
     pages.forEach(p => p.findings.forEach(f => {
-      if (f.status === 'fail') filtFail++;
+      if (f.status === 'ignore') filtIgnore++;
+      else if (f.status === 'fail') filtFail++;
       else if (f.status === 'warn') filtWarn++;
       else filtPass++;
     }));
@@ -2398,6 +2569,7 @@ function renderModuleView() {
       filtFail > 0 ? `<span class="badge badge-fail">${filtFail} issue${filtFail>1?'s':''}</span>` : '',
       filtWarn > 0 ? `<span class="badge badge-warn">${filtWarn} manual</span>` : '',
       filtPass > 0 ? `<span class="badge badge-pass">${filtPass} pass</span>` : '',
+      filtIgnore > 0 ? `<span class="badge badge-ignore">${filtIgnore} ignored</span>` : '',
     ].join('');
 
     const div = document.createElement('div');
@@ -2424,12 +2596,13 @@ function renderPageBlock(page, pid, filter) {
   // Filter findings to only those matching the active filter
   const visibleFindings = activeFilter === 'all'
     ? page.findings
-    : page.findings.filter(f => f.status === activeFilter);
+    : page.findings.filter(f => findingMatchesFilter(f, activeFilter));
 
   // Badge counts based on visible findings only
   const filteredFail = visibleFindings.filter(f => f.status === 'fail').length;
   const filteredWarn = visibleFindings.filter(f => f.status === 'warn').length;
   const filteredPass = visibleFindings.filter(f => f.status === 'pass').length;
+  const filteredIgnore = visibleFindings.filter(f => f.status === 'ignore').length;
 
   const overallStatus = filteredFail > 0 ? 'fail' : filteredWarn > 0 ? 'warn' : filteredPass > 0 ? 'pass'
     : page.findings.some(f => f.status === 'fail') ? 'fail'
@@ -2445,6 +2618,7 @@ function renderPageBlock(page, pid, filter) {
     filteredFail > 0 ? `<span class="badge badge-fail">${filteredFail} issue${filteredFail>1?'s':''}</span>` : '',
     filteredWarn > 0 ? `<span class="badge badge-warn">${filteredWarn} manual</span>` : '',
     filteredPass > 0 ? `<span class="badge badge-pass">${filteredPass} pass</span>` : '',
+    filteredIgnore > 0 ? `<span class="badge badge-ignore">${filteredIgnore} ignored</span>` : '',
   ].join('');
 
   const findingsHtml = visibleFindings.map(f => renderFinding(f)).join('');
@@ -2483,12 +2657,26 @@ function renderPageBlock(page, pid, filter) {
 
 function renderFinding(f) {
   const icons = {
-    pass: `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#dcfce7" stroke="#16a34a" stroke-width="1.25"/><path d="M5.5 9l2.5 2.5 4.5-4.5" stroke="#16a34a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-    fail: `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#fee2e2" stroke="#dc2626" stroke-width="1.25"/><path d="M6 6l6 6M12 6l-6 6" stroke="#dc2626" stroke-width="1.6" stroke-linecap="round"/></svg>`,
-    warn: `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#fef3c7" stroke="#d97706" stroke-width="1.25"/><path d="M9 5.5v4" stroke="#d97706" stroke-width="1.7" stroke-linecap="round"/><circle cx="9" cy="12.5" r=".9" fill="#d97706"/></svg>`,
+    pass:   `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#dcfce7" stroke="#16a34a" stroke-width="1.25"/><path d="M5.5 9l2.5 2.5 4.5-4.5" stroke="#16a34a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    fail:   `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#fee2e2" stroke="#dc2626" stroke-width="1.25"/><path d="M6 6l6 6M12 6l-6 6" stroke="#dc2626" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+    warn:   `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#fef3c7" stroke="#d97706" stroke-width="1.25"/><path d="M9 5.5v4" stroke="#d97706" stroke-width="1.7" stroke-linecap="round"/><circle cx="9" cy="12.5" r=".9" fill="#d97706"/></svg>`,
+    ignore: `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#f3f4f6" stroke="#9ca3af" stroke-width="1.25"/><path d="M5.5 9h7" stroke="#9ca3af" stroke-width="1.6" stroke-linecap="round"/></svg>`,
   };
 
-  const issueHtml = (f.issues || []).map((iss, idx) => {
+  // Helper: per-issue buttons and state class
+  function issueButtons(id) {
+    const done = !!clChecked[id], ign = !!issueIgnored[id];
+    if (done) return `<div class="issue-actions"><button class="check-action-btn" onclick="undoIssueOverride('${id}')">↩ Undo</button></div>`;
+    if (ign)  return `<div class="issue-actions"><button class="check-action-btn" onclick="undoIssueOverride('${id}')">↩ Undo ignore</button></div>`;
+    return `<div class="issue-actions"><button class="check-action-btn complete" onclick="markIssueComplete('${id}')">✓ Mark complete</button><button class="check-action-btn" onclick="markIssueIgnore('${id}')">Ignore</button></div>`;
+  }
+  function issueStateClass(id) {
+    if (clChecked[id]) return ' is-done';
+    if (issueIgnored[id]) return ' is-ignored';
+    return '';
+  }
+
+  const issueHtml = (f.status !== 'ignore') ? (f.issues || []).map(iss => {
     const swatchHtml = (iss.fgHex && iss.bgHex)
       ? `<div class="contrast-swatch" style="margin-top:3px">
            <span class="swatch-box" style="background:${iss.bgHex}"></span>
@@ -2499,45 +2687,35 @@ function renderFinding(f) {
          </div>`
       : '';
     const cls = f.status === 'fail' ? 'mod-issue-item' : 'mod-warn-item';
-    const itemId = iss._clId;
-    const isDone = clIsChecked(itemId);
-    return `<div class="${cls} cl-inline-item${isDone ? ' cl-inline-done' : ''}" id="cli-${itemId}" onclick="clInlineToggle('${itemId}', event)" role="checkbox" aria-checked="${isDone}" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){clInlineToggle('${itemId}', event)}">
-      <div style="display:flex;align-items:flex-start;gap:8px">
-        <div class="cl-inline-check${isDone ? ' cl-inline-checked' : ''}" aria-hidden="true">
-          ${isDone ? '<svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}
-        </div>
-        <div style="flex:1;min-width:0">
-          <span class="cl-inline-text">${escHtml(iss.issue)}</span>
-          ${swatchHtml}
-          ${iss.fix ? `<div class="fix">Suggestion: ${escHtml(iss.fix)}</div>` : ''}
-        </div>
-      </div>
+    const id = iss._clId;
+    return `<div class="${cls}${issueStateClass(id)}" id="iss-${id}">
+      <span class="cl-inline-text">${escHtml(iss.issue)}</span>
+      ${swatchHtml}
+      ${iss.fix ? `<div class="fix">Suggestion: ${escHtml(iss.fix)}</div>` : ''}
+      ${issueButtons(id)}
     </div>`;
-  }).join('');
+  }).join('') : '';
 
-  // For findings with no sub-issues (manual checks, pass summaries)
+  // Manual check row — buttons inside the card
   let manualCheck = '';
-  if ((f.issues || []).length === 0 && (f.status === 'fail' || f.status === 'warn')) {
-    const itemId = f._clId;
-    const isDone = clIsChecked(itemId);
-    manualCheck = `<div class="mod-warn-item cl-inline-item${isDone ? ' cl-inline-done' : ''}" id="cli-${itemId}" onclick="clInlineToggle('${itemId}', event)" role="checkbox" aria-checked="${isDone}" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){clInlineToggle('${itemId}', event)}">
-      <div style="display:flex;align-items:flex-start;gap:8px">
-        <div class="cl-inline-check${isDone ? ' cl-inline-checked' : ''}" aria-hidden="true">
-          ${isDone ? '<svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}
-        </div>
-        <div style="flex:1"><span class="cl-inline-text" style="font-style:italic;color:var(--c-ink-muted)">Mark as reviewed</span></div>
-      </div>
+  if (f.status !== 'ignore' && (f.issues || []).length === 0 && (f.status === 'fail' || f.status === 'warn')) {
+    const id = f._clId;
+    manualCheck = `<div class="mod-warn-item${issueStateClass(id)}" id="iss-${id}">
+      <span class="cl-inline-text" style="font-style:italic;color:var(--c-ink-muted)">Manual review required</span>
+      ${issueButtons(id)}
     </div>`;
   }
 
-  return `<div class="finding-row">
+  const ignoredClass = f.status === 'ignore' ? ' is-ignored' : '';
+
+  return `<div class="finding-row${ignoredClass}" data-status="${f.status}">
     <div class="finding-label" style="display:flex;align-items:center;gap:4px;padding-top:1px">
-      ${icons[f.status] || icons.warn}
+      <span class="finding-status-icon">${icons[f.status] || icons.warn}</span>
       <span>${escHtml(f.checkLabel)}</span>
     </div>
     <div class="finding-content">
       <div class="finding-title">${escHtml(f.title)}</div>
-      <div style="font-size:10px;color:var(--c-ink-ghost);font-family:var(--font-mono);margin-top:1px">${f.wcag}</div>
+      <div style="font-size:10px;color:var(--c-ink-ghost);font-family:var(--font-mono);margin-top:1px">${f.wcag}${f.status === 'ignore' ? ' · <em>Ignored</em>' : ''}</div>
       ${issueHtml}${manualCheck}
     </div>
   </div>`;
@@ -3170,8 +3348,10 @@ async function saveProgress() {
     .filter(([, v]) => v)
     .map(([k]) => k);
 
-  if (doneIds.length === 0) {
-    alert('No items have been marked as fixed yet — nothing to save.');
+  const ignoredIds = Object.keys(issueIgnored).filter(k => issueIgnored[k]);
+
+  if (doneIds.length === 0 && ignoredIds.length === 0) {
+    alert('No items have been marked yet — nothing to save.');
     return;
   }
 
@@ -3187,6 +3367,7 @@ async function saveProgress() {
     courseFile: fileObj.name,
     canvasUrl:  canvasBaseUrl || '',
     checkedIds: doneIds,
+    ignoredIds: ignoredIds,
   };
 
   // Package the original course file + progress.json into a single zip
@@ -3212,6 +3393,7 @@ async function saveProgress() {
 
 // Holds IDs loaded from a progress file before the audit runs.
 let pendingRestoreIds = [];
+let pendingIgnoredIds = [];
 
 // Called when the user picks a progress package zip.
 // Extracts the embedded course file and progress JSON, pre-loads the Canvas
@@ -3252,8 +3434,9 @@ async function handleProgressRestore(file) {
       document.getElementById('canvas-url-input').value = data.canvasUrl;
     }
 
-    // Queue the checked IDs
+    // Queue the checked and ignored IDs
     pendingRestoreIds = data.checkedIds;
+    pendingIgnoredIds = Array.isArray(data.ignoredIds) ? data.ignoredIds : [];
 
     // Show confirmation
     const tag = document.getElementById('progress-restore-name');
@@ -3271,14 +3454,17 @@ async function handleProgressRestore(file) {
 // Applies any pending restore IDs after the audit has stamped its _clIds.
 // Called at the end of the audit runner, before renderResults.
 function applyPendingRestore() {
-  if (!pendingRestoreIds.length) return;
+  if (!pendingRestoreIds.length && !pendingIgnoredIds.length) return;
   pendingRestoreIds.forEach(id => { clChecked[id] = true; });
+  pendingIgnoredIds.forEach(id => { issueIgnored[id] = true; });
   pendingRestoreIds = [];
+  pendingIgnoredIds = [];
 }
 
 // ── Inline Fix Checklist ────────────────────────────────────────────────────
 // Simple key→done map; items identified by a stable hash of label+issue+index
-const clChecked = {};  // id → boolean
+const clChecked = {};    // id → boolean (complete)
+const issueIgnored = {}; // id → boolean (ignored)
 let clTotalItems = 0;
 
 // Returns true if the checklist item with this _clId has been marked as fixed.
@@ -3288,26 +3474,143 @@ function clIsChecked(id) {
 
 // Toggles a single checklist item's done state, updates every matching DOM element
 // (both views may render the same item simultaneously), then refreshes the progress bar.
-function clInlineToggle(id, event) {
-  if (event) event.stopPropagation();
-  clChecked[id] = !clChecked[id];
-  // Update ALL elements with this id (both views may be in DOM simultaneously)
-  document.querySelectorAll('[id="cli-' + id + '"]').forEach(el => {
-    const isDone = clChecked[id];
-    el.classList.toggle('cl-inline-done', isDone);
-    el.setAttribute('aria-checked', isDone);
-    const box = el.querySelector('.cl-inline-check');
-    if (box) {
-      box.classList.toggle('cl-inline-checked', isDone);
-      box.innerHTML = isDone
-        ? '<svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-        : '';
-    }
+// ── Status icons for parent-icon sync (18 px = check-type view, 14 px = module view) ──
+const _CI_PASS_18 = `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#dcfce7" stroke="#16a34a" stroke-width="1.25"/><path d="M5.5 9l2.5 2.5 4.5-4.5" stroke="#16a34a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const _CI_IGNORE_18 = `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#f3f4f6" stroke="#9ca3af" stroke-width="1.25"/><path d="M5.5 9h7" stroke="#9ca3af" stroke-width="1.6" stroke-linecap="round"/></svg>`;
+const _CI_ICONS_18 = {
+  pass: _CI_PASS_18,
+  fail: `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#fee2e2" stroke="#dc2626" stroke-width="1.25"/><path d="M6 6l6 6M12 6l-6 6" stroke="#dc2626" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+  warn: `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#fef3c7" stroke="#d97706" stroke-width="1.25"/><path d="M9 5.5v4" stroke="#d97706" stroke-width="1.7" stroke-linecap="round"/><circle cx="9" cy="12.5" r=".9" fill="#d97706"/></svg>`,
+};
+const _CI_PASS_14 = `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#dcfce7" stroke="#16a34a" stroke-width="1.25"/><path d="M5.5 9l2.5 2.5 4.5-4.5" stroke="#16a34a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const _CI_IGNORE_14 = `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#f3f4f6" stroke="#9ca3af" stroke-width="1.25"/><path d="M5.5 9h7" stroke="#9ca3af" stroke-width="1.6" stroke-linecap="round"/></svg>`;
+const _CI_ICONS_14 = {
+  pass: _CI_PASS_14,
+  fail: `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#fee2e2" stroke="#dc2626" stroke-width="1.25"/><path d="M6 6l6 6M12 6l-6 6" stroke="#dc2626" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+  warn: `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#fef3c7" stroke="#d97706" stroke-width="1.25"/><path d="M9 5.5v4" stroke="#d97706" stroke-width="1.7" stroke-linecap="round"/><circle cx="9" cy="12.5" r=".9" fill="#d97706"/></svg>`,
+};
+
+// Updates the status icon of the nearest .check-item or .finding-row parent
+// based on whether all its .cl-inline-item children are marked done.
+function clSyncParentIcon(el) {
+  // Check-type view: .check-item[data-status] > .status-icon
+  const checkItem = el.closest('.check-item');
+  if (checkItem) {
+    const statusIcon = checkItem.querySelector('.status-icon');
+    if (!statusIcon) return;
+    const items = Array.from(checkItem.querySelectorAll('[id^="iss-"]'));
+    if (items.length === 0) return;
+    const allDone     = items.every(i => i.classList.contains('is-done'));
+    const allIgnored  = items.every(i => i.classList.contains('is-ignored'));
+    const allResolved = items.every(i => i.classList.contains('is-done') || i.classList.contains('is-ignored'));
+    const orig = checkItem.dataset.status || 'warn';
+    statusIcon.innerHTML = allDone || allResolved ? _CI_PASS_18
+      : allIgnored ? _CI_IGNORE_18
+      : (_CI_ICONS_18[orig] || _CI_ICONS_18.warn);
+    return;
+  }
+  // Module view: .finding-row[data-status] > .finding-label > .finding-status-icon
+  const findingRow = el.closest('.finding-row');
+  if (findingRow) {
+    const iconSpan = findingRow.querySelector('.finding-status-icon');
+    if (!iconSpan) return;
+    const items = Array.from(findingRow.querySelectorAll('[id^="iss-"]'));
+    if (items.length === 0) return;
+    const allDone     = items.every(i => i.classList.contains('is-done'));
+    const allIgnored  = items.every(i => i.classList.contains('is-ignored'));
+    const allResolved = items.every(i => i.classList.contains('is-done') || i.classList.contains('is-ignored'));
+    const orig = findingRow.dataset.status || 'warn';
+    iconSpan.innerHTML = allDone || allResolved ? _CI_PASS_14
+      : allIgnored ? _CI_IGNORE_14
+      : (_CI_ICONS_14[orig] || _CI_ICONS_14.warn);
+  }
+}
+
+// Syncs every parent icon in the current DOM — used after bulk state changes.
+function clSyncAllParentIcons() {
+  document.querySelectorAll('.check-item[data-status]').forEach(checkItem => {
+    const statusIcon = checkItem.querySelector('.status-icon');
+    if (!statusIcon) return;
+    const items = Array.from(checkItem.querySelectorAll('[id^="iss-"]'));
+    if (items.length === 0) return;
+    const allDone     = items.every(i => i.classList.contains('is-done'));
+    const allIgnored  = items.every(i => i.classList.contains('is-ignored'));
+    const allResolved = items.every(i => i.classList.contains('is-done') || i.classList.contains('is-ignored'));
+    const orig = checkItem.dataset.status || 'warn';
+    statusIcon.innerHTML = allDone || allResolved ? _CI_PASS_18
+      : allIgnored ? _CI_IGNORE_18
+      : (_CI_ICONS_18[orig] || _CI_ICONS_18.warn);
   });
+  document.querySelectorAll('.finding-row[data-status]').forEach(findingRow => {
+    const iconSpan = findingRow.querySelector('.finding-status-icon');
+    if (!iconSpan) return;
+    const items = Array.from(findingRow.querySelectorAll('[id^="iss-"]'));
+    if (items.length === 0) return;
+    const allDone     = items.every(i => i.classList.contains('is-done'));
+    const allIgnored  = items.every(i => i.classList.contains('is-ignored'));
+    const allResolved = items.every(i => i.classList.contains('is-done') || i.classList.contains('is-ignored'));
+    const orig = findingRow.dataset.status || 'warn';
+    iconSpan.innerHTML = allDone || allResolved ? _CI_PASS_14
+      : allIgnored ? _CI_IGNORE_14
+      : (_CI_ICONS_14[orig] || _CI_ICONS_14.warn);
+  });
+}
+
+// ── Per-issue mark complete / ignore ─────────────────────────────────────────
+function _issueActionBtns(id) {
+  const done = !!clChecked[id], ign = !!issueIgnored[id];
+  if (done) return `<button class="check-action-btn" onclick="undoIssueOverride('${id}')">↩ Undo</button>`;
+  if (ign)  return `<button class="check-action-btn" onclick="undoIssueOverride('${id}')">↩ Undo ignore</button>`;
+  return `<button class="check-action-btn complete" onclick="markIssueComplete('${id}')">✓ Mark complete</button><button class="check-action-btn" onclick="markIssueIgnore('${id}')">Ignore</button>`;
+}
+
+function refreshIssueCard(id) {
+  const isDone = !!clChecked[id], isIgnored = !!issueIgnored[id];
+  document.querySelectorAll('[id="iss-' + id + '"]').forEach(el => {
+    el.classList.toggle('is-done', isDone);
+    el.classList.toggle('is-ignored', isIgnored && !isDone);
+    const actions = el.querySelector('.issue-actions');
+    if (actions) actions.innerHTML = _issueActionBtns(id);
+    clSyncParentIcon(el);
+  });
+}
+
+function markIssueComplete(id) {
+  clChecked[id] = true;
+  delete issueIgnored[id];
+  refreshIssueCard(id);
   clUpdateProgress();
 }
 
-// Recalculates and renders the fix-progress bar.
+function markIssueIgnore(id) {
+  issueIgnored[id] = true;
+  clChecked[id] = false;
+  refreshIssueCard(id);
+  clUpdateProgress();
+}
+
+function undoIssueOverride(id) {
+  clChecked[id] = false;
+  delete issueIgnored[id];
+  refreshIssueCard(id);
+  clUpdateProgress();
+}
+
+// clInlineToggle kept as no-op for any legacy references
+function clInlineToggle() {}
+
+function clClearAll() {
+  Object.keys(clChecked).forEach(k => { clChecked[k] = false; });
+  Object.keys(issueIgnored).forEach(k => { delete issueIgnored[k]; });
+  document.querySelectorAll('[id^="iss-"]').forEach(el => {
+    const id = el.id.replace(/^iss-/, '');
+    el.classList.remove('is-done', 'is-ignored');
+    const actions = el.querySelector('.issue-actions');
+    if (actions) actions.innerHTML = _issueActionBtns(id);
+  });
+  clSyncAllParentIcons();
+  clUpdateProgress();
+}
 // Uses clTotalItems (stamped at audit time) as the denominator so the count stays
 // consistent regardless of which view is currently rendered or which accordions are open.
 function clUpdateProgress() {
@@ -3341,6 +3644,7 @@ function clClearAll() {
     const box = el.querySelector('.cl-inline-check');
     if (box) { box.classList.remove('cl-inline-checked'); box.innerHTML = ''; }
   });
+  clSyncAllParentIcons();
   clUpdateProgress();
 }
 
@@ -3360,7 +3664,7 @@ function expandIssues() {
   if (!isExpanded) {
     // Expand all accordions that contain an unchecked issue
     document.querySelectorAll('.page-body, .section-body').forEach(body => {
-      const hasIssue = body.querySelector('.cl-inline-item:not(.cl-inline-done)');
+      const hasIssue = body.querySelector('[id^="iss-"]:not(.is-done)');
       if (hasIssue) {
         body.style.display = '';
         const id = body.id.replace(/^body-/, '');
@@ -3408,21 +3712,27 @@ function showChecklistButton() {
     if (ico) ico.innerHTML = '<path d="M2 4.5l4.5 4.5 4.5-4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 1v8M2 9.5h9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>';
   }
 
-  // Re-apply any existing checked states after a view re-render, then update progress
+  // Re-apply any existing checked/ignored states after a view re-render
   setTimeout(() => {
     Object.entries(clChecked).forEach(([id, done]) => {
       if (!done) return;
-      document.querySelectorAll('[id="cli-' + id + '"]').forEach(el => {
-        el.classList.add('cl-inline-done');
-        el.setAttribute('aria-checked', 'true');
-        const box = el.querySelector('.cl-inline-check');
-        if (box) {
-          box.classList.add('cl-inline-checked');
-          box.innerHTML = '<svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-        }
+      document.querySelectorAll('[id="iss-' + id + '"]').forEach(el => {
+        el.classList.add('is-done');
+        el.classList.remove('is-ignored');
+        const actions = el.querySelector('.issue-actions');
+        if (actions) actions.innerHTML = _issueActionBtns(id);
+      });
+    });
+    Object.entries(issueIgnored).forEach(([id, ign]) => {
+      if (!ign) return;
+      document.querySelectorAll('[id="iss-' + id + '"]').forEach(el => {
+        el.classList.add('is-ignored');
+        const actions = el.querySelector('.issue-actions');
+        if (actions) actions.innerHTML = _issueActionBtns(id);
       });
     });
     clUpdateProgress();
+    clSyncAllParentIcons();
   }, 50);
 }
 

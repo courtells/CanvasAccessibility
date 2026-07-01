@@ -711,7 +711,241 @@ body{
 .check-action-btn:hover{background:var(--c-surface);box-shadow:var(--shadow-sm)}
 .check-action-btn.complete{color:var(--c-pass);border-color:var(--c-pass)}
 .check-action-btn.complete:hover{background:var(--c-pass-bg)}
+
+/* ── Slide-out preview tab ───────────────────────────────────────────────── */
+/*
+  Three-state transform (right: 0 stays constant — only translateX changes):
+  1. No results         → translateX(110%)     off-screen to the right
+  2. Results, pane shut → translateX(0)        rests at the right viewport edge
+  3. Pane open          → translateX(-50vw)    slides to the seam between panels
+
+  Transitioning via translateX keeps everything GPU-composited and avoids the
+  layout cost of animating `right` or `width`.
+*/
+#pv-slide-tab {
+  display: flex;
+  position: fixed;
+  right: 0;
+  top: 50%;
+  /* Default: off-screen */
+  transform: translateY(-50%) translateX(110%);
+  /* Slide-OUT easing when tab disappears off-screen */
+  transition: transform 0.25s cubic-bezier(0.4, 0, 1, 1),
+              background .15s, box-shadow .15s;
+  pointer-events: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 9px;
+  background: #1d4ed8;
+  color: white;
+  border: none;
+  border-radius: 8px 0 0 8px;
+  cursor: pointer;
+  z-index: 501; /* above the preview pane so it's never covered */
+  box-shadow: -3px 0 14px rgba(0,0,0,.18);
+  font-family: var(--font-body, inherit);
+}
+
+/* Results visible, pane CLOSED — slide in to the right viewport edge */
+body.results-visible:not(.pv-open) #pv-slide-tab {
+  transform: translateY(-50%) translateX(0);
+  pointer-events: auto;
+  /* Spring easing on the way in */
+  transition: transform 0.4s cubic-bezier(0.34, 1.4, 0.64, 1),
+              background .15s, box-shadow .15s;
+}
+
+/* Pane OPEN — slide left to sit exactly at the seam (left edge of preview pane) */
+body.pv-open #pv-slide-tab {
+  transform: translateY(-50%) translateX(calc(-50vw));
+  pointer-events: auto;
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              background .15s, box-shadow .15s;
+}
+
+#pv-slide-tab:hover {
+  background: #1e40af;
+  box-shadow: -4px 0 18px rgba(0,0,0,.24);
+}
+
+/* Chevron rotates 180° when the pane is open to signal "close" */
+#pv-slide-tab svg {
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+body.pv-open #pv-slide-tab svg {
+  transform: rotate(180deg);
+}
+
+.pv-tab-label {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+/* Narrow screens: keep tab at the right edge when pane is open (no seam to snap to) */
+@media (max-width: 900px) {
+  body.pv-open #pv-slide-tab {
+    transform: translateY(-50%) translateX(0);
+  }
+}
+
+/* ── Page preview ─────────────────────────────────────────────────────────── */
+/* Default: panel is part of normal flow but hidden until opened */
+#results-layout{display:block}
+#pv-panel{ display:none; overflow: hidden; }
+
+/* Open state: shrink the main column to the left half of the viewport and
+   dock the preview panel as a fixed pane filling the entire right half —
+   the same split-screen pattern Claude itself uses for rendered HTML. */
+body.pv-open{ overflow-x: hidden; }
+body.pv-open #app{
+  max-width: none;
+  width: 50%;
+  margin: 0;
+  padding-right: 3rem; /* keeps content clear of the slide-out tab at the seam */
+  transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+/* Also transition back when closing */
+#app{
+  transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+              max-width 0s, margin 0s;
+}
+body.pv-open #pv-panel{
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 50%;
+  height: 100vh;
+  z-index: 500;
+  border: 0;
+  border-left: 3px solid #1d4ed8;
+  border-radius: 0;
+  background: white;
+  box-shadow: -6px 0 24px rgba(0,0,0,.08);
+  /* Slide in from the right edge */
+  animation: pvPanelSlideIn 0.45s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+@keyframes pvPanelSlideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+.pv-header{
+  flex-shrink: 0;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: .6rem .7rem;
+  border-bottom: 1px solid var(--c-border);
+  background: var(--c-surface);
+}
+.pv-header select{
+  flex: 1;
+  min-width: 0;
+  font-size:12.5px;
+  font-family: var(--font-body);
+  padding: 5px 6px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--c-border-strong);
+  background: white;
+  color: var(--c-ink);
+}
+.pv-iframe-wrap{ flex: 1; min-height: 0; background: white; }
+#pv-iframe{ width: 100%; height: 100%; border: 0; }
+#preview-toggle-btn.active{ background: var(--c-ink); color: white; border-color: var(--c-ink); }
+.issue-item.pv-selected, .warn-item.pv-selected,
+.mod-issue-item.pv-selected, .mod-warn-item.pv-selected{
+  box-shadow: 0 0 0 2px var(--c-accent);
+}
+
+/* Below this width, a 50/50 split is too cramped — fall back to a full-width
+   panel that sits above the results instead of a docked side pane. */
+@media (max-width: 900px){
+  body.pv-open #app{ width: auto; max-width: 860px; margin: 0 auto; }
+  body.pv-open #pv-panel{
+    position: relative;
+    top: 0; right: auto;
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-xs);
+    margin-bottom: 1rem;
+  }
+  body.pv-open #pv-panel .pv-iframe-wrap{ flex: none; height: 480px; }
+}
+
+/* ── Guided navigation bar ───────────────────────────────────────────────── */
+#guided-nav-bar{
+  display:none;align-items:center;gap:8px;
+  padding:.55rem .75rem;
+  background:var(--c-surface);border:1px solid var(--c-border);
+  border-radius:var(--r-md);margin-bottom:.75rem;flex-wrap:wrap;
+}
+body.results-visible #guided-nav-bar{ display:flex; }
+.nav-counter{font-size:12.5px;color:var(--c-ink-muted);flex:1;text-align:center;white-space:nowrap;}
+.nav-counter strong{ color:var(--c-ink); }
+.nav-btn{
+  display:inline-flex;align-items:center;gap:4px;padding:5px 11px;
+  font-size:12px;border-radius:var(--r-sm);border:1px solid var(--c-border-strong);
+  background:white;cursor:pointer;font-family:var(--font-body);color:var(--c-ink);
+  transition:background .12s;white-space:nowrap;
+}
+.nav-btn:hover:not(:disabled){ background:var(--c-surface); }
+.nav-btn:disabled{ opacity:.4;cursor:not-allowed; }
+.nav-btn.primary{ background:#1d4ed8;color:white;border-color:#1d4ed8; }
+.nav-btn.primary:hover:not(:disabled){ background:#1e40af; }
+
+/* ── Module jump bar ─────────────────────────────────────────────────────── */
+#module-jump-bar{
+  display:none;gap:6px;flex-wrap:wrap;
+  padding:.45rem 0 .65rem;margin-bottom:.25rem;
+  border-bottom:1px solid var(--c-border);align-items:center;
+}
+#module-jump-bar.visible{ display:flex; }
+.jump-label{
+  font-size:11px;font-weight:600;text-transform:uppercase;
+  letter-spacing:.06em;color:var(--c-ink-ghost);white-space:nowrap;margin-right:2px;
+}
+.jump-select{
+  font-size:12.5px;padding:4px 8px;
+  border-radius:var(--r-sm);
+  border:1px solid var(--c-border-strong);
+  background:white;cursor:pointer;
+  font-family:var(--font-body);color:var(--c-ink);
+  max-width:240px;
+}
+.scroll-jump-btn{
+  width:28px;height:28px;border-radius:var(--r-sm);
+  border:1px solid var(--c-border-strong);
+  background:white;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--c-ink-soft);transition:background .12s,color .12s;
+  flex-shrink:0;
+}
+.scroll-jump-btn:hover{ background:var(--c-surface-2);color:var(--c-ink); }
+
+/* ── Completion note ─────────────────────────────────────────────────────── */
+.issue-note-wrap{ margin-top:5px; }
+.issue-note-input{
+  width:100%;font-size:11.5px;font-family:var(--font-body);color:var(--c-ink);
+  padding:4px 7px;border:1px solid var(--c-border-strong);border-radius:var(--r-sm);
+  background:white;resize:vertical;min-height:40px;transition:border-color .12s;
+}
+.issue-note-input:focus{ outline:none;border-color:#1d4ed8; }
+.issue-note-display{
+  font-size:11.5px;color:var(--c-ink-muted);font-style:italic;
+  margin-top:3px;padding:3px 6px;border-left:2px solid var(--c-border-strong);
+}
+
 </style>
+
 
 <div id="app">
   <div class="hdr">
@@ -840,6 +1074,19 @@ body{
       </div>
     </div>
 
+    <!-- Guided navigation bar -->
+    <div id="guided-nav-bar">
+      <button class="nav-btn" id="nav-prev-btn" onclick="navStep(-1)" disabled>
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M7.5 2L3.5 6l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Previous
+      </button>
+      <span class="nav-counter" id="nav-counter">—</span>
+      <button class="nav-btn primary" id="nav-next-btn" onclick="navStep(1)" disabled>
+        Next issue
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4.5 2L8.5 6l-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+
     <!-- View toggle + filter bar -->
     <div class="view-toggle-wrap">
       <div class="view-toggle">
@@ -852,9 +1099,23 @@ body{
           By Check Type
         </button>
       </div>
+
+      <!-- Module jump dropdown — shown only in By Module view -->
+      <div id="module-jump-bar" style="display:none;align-items:center;gap:6px">
+        <span class="jump-label">Jump to</span>
+        <select id="module-jump-select" class="jump-select"
+          onchange="jumpToModule(this.value,this)" onclick="event.stopPropagation()">
+          <option value="" disabled selected>Module…</option>
+        </select>
+      </div>
+
       <button class="btn" id="expand-issues-btn" onclick="expandIssues()" style="font-size:12px;white-space:nowrap;display:none" data-expanded="false">
         <svg id="expand-issues-icon" width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 4.5l4.5 4.5 4.5-4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 1v8M2 9.5h9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
         <span id="expand-issues-label">Expand all with issues</span>
+      </button>
+      <button class="btn" id="preview-toggle-btn" onclick="togglePageViewer()" style="font-size:12px;white-space:nowrap" title="View the rendered Canvas page alongside results">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" style="vertical-align:-2px;margin-right:4px"><path d="M1 7s2.2-4 6-4 6 4 6 4-2.2 4-6 4-6-4-6-4z" stroke="currentColor" stroke-width="1.2"/><circle cx="7" cy="7" r="1.6" stroke="currentColor" stroke-width="1.2"/></svg>
+        Page preview
       </button>
       <div class="filter-bar" id="filter-bar">
         <button class="filter-btn active" onclick="filterResults('all',this)">All</button>
@@ -863,9 +1124,21 @@ body{
         <button class="filter-btn" onclick="filterResults('pass',this)">Passed</button>
         <button class="filter-btn" onclick="filterResults('ignore',this)">Ignored</button>
       </div>
+
+      <!-- Scroll shortcuts — always in the toolbar so they stay in the left pane -->
+      <div style="display:flex;gap:4px;margin-left:auto">
+        <button class="scroll-jump-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Jump to top">
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 10L7 5l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="scroll-jump-btn" onclick="window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})" title="Jump to bottom">
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 4l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
     </div>
 
-    <div id="results-body"></div>
+    <div id="results-layout">
+      <div id="results-body"></div>
+    </div>
     <div class="actions" style="flex-wrap:nowrap">
       <button class="btn btn-green" onclick="saveProgress()" style="white-space:nowrap">
         <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M11 3.5V10a1 1 0 01-1 1H3a1 1 0 01-1-1V3.5M4.5 1h4L10 3.5H3L4.5 1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M5 7h3M5 9h2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
@@ -886,6 +1159,36 @@ body{
         Clear &amp; restart
       </button>
     </div>
+  </div>
+</div>
+
+<!-- pv-panel lives outside #app deliberately: #app has a transform-based mount
+     animation, which would otherwise create a new containing block and break
+     this panel's position:fixed docking to the real viewport edge. -->
+<!-- Slide-out tab: fixed to the right edge, shown when results are displayed,
+     hidden when the preview pane is already open. Clicking it opens the pane. -->
+<button id="pv-slide-tab" onclick="togglePageViewer()"
+  aria-label="Open page preview" title="Open page preview">
+  <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+    <path d="M9.5 2L4.5 7l5 5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <span class="pv-tab-label">Preview</span>
+</button>
+
+<div id="pv-panel">
+  <div class="pv-header">
+    <select id="pv-page-select"></select>
+    <button onclick="closePageViewer()" aria-label="Close preview" title="Close preview"
+      style="flex-shrink:0;width:28px;height:28px;border-radius:50%;border:1.5px solid var(--c-border-strong);background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--c-ink-soft);box-shadow:var(--shadow-xs);transition:background .15s,color .15s,border-color .15s"
+      onmouseover="this.style.background='#fee2e2';this.style.color='#b91c1c';this.style.borderColor='#fca5a5'"
+      onmouseout="this.style.background='white';this.style.color='var(--c-ink-soft)';this.style.borderColor='var(--c-border-strong)'">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+        <path d="M1.5 1.5l9 9M10.5 1.5l-9 9" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+  <div class="pv-iframe-wrap">
+    <iframe id="pv-iframe" sandbox="allow-same-origin allow-scripts" title="Canvas page preview"></iframe>
   </div>
 </div>
 
@@ -946,20 +1249,6 @@ body{
 </div>
 
 <!-- ── Jump buttons ──────────────────────────────────────────────────────────── -->
-<div id="jump-btns" style="display:none;position:fixed;bottom:1.5rem;right:1.5rem;z-index:800;display:none;flex-direction:column;gap:6px">
-  <button onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Jump to top"
-    style="width:36px;height:36px;border-radius:50%;border:1px solid var(--c-border-strong);background:white;box-shadow:0 2px 8px rgba(0,0,0,.1);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--c-ink-soft);transition:background .15s,color .15s"
-    onmouseover="this.style.background='var(--c-surface-2)';this.style.color='var(--c-ink)'"
-    onmouseout="this.style.background='white';this.style.color='var(--c-ink-soft)'">
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 10L7 5l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-  </button>
-  <button onclick="window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})" title="Jump to bottom"
-    style="width:36px;height:36px;border-radius:50%;border:1px solid var(--c-border-strong);background:white;box-shadow:0 2px 8px rgba(0,0,0,.1);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--c-ink-soft);transition:background .15s,color .15s"
-    onmouseover="this.style.background='var(--c-surface-2)';this.style.color='var(--c-ink)'"
-    onmouseout="this.style.background='white';this.style.color='var(--c-ink-soft)'">
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 4l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-  </button>
-</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -992,6 +1281,18 @@ let canvasBaseUrl = '';   // Optional base URL entered by faculty; enables direc
 let currentFilter = 'all';       // Active filter: 'all' | 'fail' | 'warn' | 'pass'
 let currentView   = 'modules';   // Active view: 'modules' | 'checks'
 let findingMap    = {};  // _fId → finding object, for module-view mark-complete/ignore
+
+// ── Page preview state ──────────────────────────────────────────────────────
+let lastZip        = null;   // JSZip instance from the most recent audit — used to fetch images for the preview
+let pagesByPath     = {};    // path → {path,name,module,bodyHTML}, built after audit for the page preview
+let pathIndex       = {};    // path → integer index, avoids quoting raw paths inside onclick handlers
+let indexToPath     = [];    // integer index → path
+const pvRenderCache = new Map(); // path → fully-resolved preview HTML (images inlined), cached per audit run
+let pvCurrentPath   = null;  // path currently loaded into the preview iframe
+let pvLoadToken     = 0;     // monotonic id used to discard stale, superseded loads
+let pvSelectedClId  = null;  // _clId of the issue currently selected/highlighted in the preview
+let pageLocatorMap  = {};    // path → Array<locatorId> — all flagged element IDs for a given page
+let pvLocatorToClIds = {};   // locatorId → [_clId, ...] — reverse lookup for iframe→list navigation
 
 // Derive a Canvas page URL from the exported file path and the user-supplied base URL.
 // HTML pages use /pages/slug; discussion XML files use /discussion_topics/ (no reliable
@@ -1094,7 +1395,21 @@ function resetTool() {
   Object.keys(clChecked).forEach(k => delete clChecked[k]);
   Object.keys(issueIgnored).forEach(k => delete issueIgnored[k]);
   Object.keys(clChecked).forEach(k => delete clChecked[k]);
+  Object.keys(clNotes).forEach(k => delete clNotes[k]);
+  clSyncMap = {}; navQueue = []; navIdx = -1;
   pendingRestoreIds = [];
+  pendingIgnoredIds = [];
+  pendingCheckedFps = [];
+  pendingIgnoredFps = [];
+  pendingNotesByFp  = {};
+  lastZip = null;
+  pagesByPath = {}; pathIndex = {}; indexToPath = [];
+  pvRenderCache.clear();
+  pvCurrentPath = null;
+  pageLocatorMap = {};
+  pvLocatorToClIds = {};
+  closePageViewer();
+  document.body.classList.remove('results-visible');
   document.getElementById('progress-restore-name').style.display = 'none';
   document.getElementById('progress-restore-input').value = '';
   document.getElementById('upload-area').style.display = 'block';
@@ -1148,6 +1463,7 @@ async function runAudit() {
 
   try {
     const zip = await JSZip.loadAsync(fileObj);
+    lastZip = zip;
     setProgress(15, 'Checking file contents...');
     await sleep(200);
 
@@ -1239,6 +1555,11 @@ async function runAudit() {
     auditData = await performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOrder, pageOrder, gifFiles, pdfFiles);
     auditData.courseTitle = courseTitle;
 
+    buildPagesByPath(pages, auditData.pageBodyMap);
+    pageLocatorMap = buildPageLocatorMap(auditData);
+    pvRenderCache.clear(); // clear after locator map rebuild so fresh click-bridge script is used
+    pvCurrentPath = null;
+
     // Stamp a unique _clId on every issue object so checkboxes are always distinct
     let _clStamp = 0;
     const _stampFindings = findings => findings.forEach(f => {
@@ -1281,6 +1602,11 @@ async function runAudit() {
     }
 
     clTotalItems = _clStamp;  // total unique checkable items across both views
+
+    // Build cross-view sync map: id → [all related ids in both views].
+    // Issues with the same locatorId or (pagePath + issue text) are the same
+    // underlying problem — marking one done should mark all of them done.
+    clSyncMap = buildClSyncMap(auditData);
 
     setProgress(90, 'Generating report...');
     await sleep(300);
@@ -1630,7 +1956,7 @@ function resolveBackground(el) {
 // Scans a parsed HTML document for inline-styled text and checks each element's
 // foreground/background contrast ratio against WCAG 1.4.3 thresholds (4.5:1 normal, 3:1 large).
 // Returns an array of issue objects for any elements that fail.
-function checkPageContrast(doc, loc, url) {
+function checkPageContrast(doc, loc, url, pagePath, tagEl) {
   const issues = [];
   const TEXT_TAGS = 'p,span,div,td,th,li,h1,h2,h3,h4,h5,h6,a,strong,em,b,i,label,caption,blockquote,pre,code,small,mark,s,del,ins';
   const elements = doc.querySelectorAll(TEXT_TAGS);
@@ -1651,9 +1977,12 @@ function checkPageContrast(doc, loc, url) {
 
     if (ratio < threshold) {
       const snippet = firstWords(el.textContent, 3);
+      const lid = tagEl ? tagEl(el) : null;
       issues.push({
         loc,
         url,
+        pagePath,
+        locatorId: lid,
         issue: `Contrast ratio ${ratio.toFixed(2)}:1 — below ${threshold}:1 required for ${label}${snippet ? ` near ${snippet}` : ''}. Foreground: ${toHex(fg)}, Background: ${toHex(bg)}.`,
         fix: `The text color (${toHex(fg)}) doesn't have enough contrast against its background (${toHex(bg)}) — current ratio is ${ratio.toFixed(2)}:1, but ${threshold}:1 is required. In Canvas, open the page editor, select the text, and choose a darker font color or a lighter background color. Use the WebAIM Contrast Checker (webaim.org/resources/contrastchecker) to test your new colors before saving.`,
         fgHex: toHex(fg),
@@ -1667,6 +1996,21 @@ function checkPageContrast(doc, loc, url) {
   return issues;
 }
 
+// ── Element tagging for the page preview ────────────────────────────────────
+// Returns a tagger function that stamps a unique data-a11y-id attribute onto a
+// DOM element (idempotent — calling it twice on the same element returns the
+// same id) so the preview iframe can later find and highlight that exact node.
+function makeTagger() {
+  let counter = 0;
+  return function tagEl(el) {
+    if (!el) return null;
+    if (!el.hasAttribute('data-a11y-id')) {
+      el.setAttribute('data-a11y-id', 'a11y-' + (counter++));
+    }
+    return el.getAttribute('data-a11y-id');
+  };
+}
+
 // ── Main audit ───────────────────────────────────────────────────────────────
 // Sentinel key for pages that exist in the export but aren't linked to any module.
 const UNATTACHED_KEY = '__unattached__';
@@ -1674,6 +2018,8 @@ const UNATTACHED_KEY = '__unattached__';
 async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOrder = [], pageOrder = {}, gifFiles = [], pdfFiles = []) {
   const parser = new DOMParser();
   const results = { sections: [], byModule: {}, moduleOrder, pageOrder };
+  const tagEl = makeTagger();          // stamps data-a11y-id attrs for the page preview
+  const pageBodyMap = {};              // pagePath → tagged, script-stripped body HTML
 
   let totalImages = 0, missingAlt = [], imagesOfText = [];
   let totalLinks = 0, badLinks = [];
@@ -1688,8 +2034,10 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOr
 
   for (const page of pages) {
     const doc = parser.parseFromString(page.content, 'text/html');
+    doc.querySelectorAll('script').forEach(s => s.remove()); // safety: never let course HTML execute in the preview
     const loc  = `${page.module} → ${page.name}`;
     const pUrl = pageUrl(page.path, page.type); // live Canvas URL for this page (may be empty)
+    const pagePath = page.path;
     const moduleName = page.inManifest ? page.module : UNATTACHED_KEY;
 
     if (!pageFindings[page.path]) {
@@ -1709,9 +2057,10 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOr
         wcag: 'Manual check',
         status: 'warn',
         title: 'Page body is empty in this export',
-        issues: [{ issue: 'This page has no auditable HTML content. It likely uses an external tool (LTI), embedded media, or content that Canvas does not include in course exports.', fix: 'Open this page in Canvas and review its content manually. If it uses an external tool (such as a publisher platform or media service), check that tool\'s own accessibility settings.' }]
+        issues: [{ pagePath, locatorId: null, issue: 'This page has no auditable HTML content. It likely uses an external tool (LTI), embedded media, or content that Canvas does not include in course exports.', fix: 'Open this page in Canvas and review its content manually. If it uses an external tool (such as a publisher platform or media service), check that tool\'s own accessibility settings.' }]
       });
       // Skip remaining checks — nothing to audit
+      pageBodyMap[pagePath] = doc.body ? doc.body.innerHTML : page.content;
       continue;
     }
 
@@ -1719,14 +2068,14 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOr
     const title = doc.querySelector('title');
     const titleMissing = !title || !title.textContent.trim() || title.textContent.trim().toLowerCase() === 'untitled';
     if (titleMissing) {
-      missingTitles.push({ loc, url: pUrl, issue: 'Page has no descriptive title tag', fix: 'In Canvas, the page title comes from the Page Name field at the top of the editor. Make sure each page has a unique, descriptive name that tells students what the page is about (e.g., "Week 3 Lecture Notes" rather than "Page 1").' });
+      missingTitles.push({ loc, url: pUrl, pagePath, locatorId: null, issue: 'Page has no descriptive title tag', fix: 'In Canvas, the page title comes from the Page Name field at the top of the editor. Make sure each page has a unique, descriptive name that tells students what the page is about (e.g., "Week 3 Lecture Notes" rather than "Page 1").' });
     }
     pf.findings.push({
       checkLabel: 'Page title',
       wcag: 'WCAG 2.4.2 Level A',
       status: titleMissing ? 'fail' : 'pass',
       title: titleMissing ? 'Missing descriptive title' : 'Descriptive title present',
-      issues: titleMissing ? [{ loc, url: pUrl, issue: 'Page has no descriptive title tag', fix: 'Add a unique, descriptive <title> that reflects the page content.' }] : []
+      issues: titleMissing ? [{ loc, url: pUrl, pagePath, locatorId: null, issue: 'Page has no descriptive title tag', fix: 'Add a unique, descriptive <title> that reflects the page content.' }] : []
     });
 
     // ── Images ───────────────────────────────────────────────────────────────
@@ -1757,21 +2106,24 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOr
       const srcName = src.split('/').pop().split('?')[0]; // filename only, strip query params
 
       if (alt === null) {
-        const issue = { loc, url: pUrl, issue: `Image missing alt attribute (src: ${srcName || 'unknown'})`, fix: 'In Canvas, click the image in the page editor, then select "Alt Text" (or the image properties icon). Type a brief description of what the image shows — for example, "Bar chart showing student survey results from Fall 2023." If the image is purely decorative (like a divider or background), check the "Decorative image" box instead.' };
+        const lid = tagEl(img);
+        const issue = { loc, url: pUrl, pagePath, locatorId: lid, issue: `Image missing alt attribute (src: ${srcName || 'unknown'})`, fix: 'In Canvas, click the image in the page editor, then select "Alt Text" (or the image properties icon). Type a brief description of what the image shows — for example, "Bar chart showing student survey results from Fall 2023." If the image is purely decorative (like a divider or background), check the "Decorative image" box instead.' };
         missingAlt.push(issue);
-        pageAltIssues.push({ loc, url: pUrl, issue: issue.issue, fix: issue.fix });
+        pageAltIssues.push({ loc, url: pUrl, pagePath, locatorId: lid, issue: issue.issue, fix: issue.fix });
       } else if (alt.length > 0 && looksLikeFilename(alt)) {
-        const issue = { loc, url: pUrl, issue: `Alt text appears to be a filename: "${alt.substring(0, 60)}"`, fix: 'The alt text currently contains a file name rather than a real description. In Canvas, click the image in the editor and update the Alt Text field with a sentence describing what the image actually shows, such as "Diagram of the water cycle showing evaporation and precipitation."' };
+        const lid = tagEl(img);
+        const issue = { loc, url: pUrl, pagePath, locatorId: lid, issue: `Alt text appears to be a filename: "${alt.substring(0, 60)}"`, fix: 'The alt text currently contains a file name rather than a real description. In Canvas, click the image in the editor and update the Alt Text field with a sentence describing what the image actually shows, such as "Diagram of the water cycle showing evaporation and precipitation."' };
         missingAlt.push(issue);
-        pageAltIssues.push({ loc, url: pUrl, issue: issue.issue, fix: issue.fix });
+        pageAltIssues.push({ loc, url: pUrl, pagePath, locatorId: lid, issue: issue.issue, fix: issue.fix });
       }
       if (/text|screenshot|slide/i.test(srcName) && (!alt || alt.length < 10)) {
         // Only add if we haven't already flagged this image for a bad alt
         const alreadyFlagged = pageAltIssues.some(x => x.issue.includes(srcName));
         if (!alreadyFlagged) {
-          const issue = { loc, url: pUrl, issue: `Possible image of text detected (src: ${srcName})`, fix: 'This image appears to contain text (such as a screenshot of a slide or document). Screen readers cannot read text inside images. Either retype the content as real text in the Canvas editor, or write out the full text as the alt description so students using assistive technology can access it.' };
+          const lid = tagEl(img);
+          const issue = { loc, url: pUrl, pagePath, locatorId: lid, issue: `Possible image of text detected (src: ${srcName})`, fix: 'This image appears to contain text (such as a screenshot of a slide or document). Screen readers cannot read text inside images. Either retype the content as real text in the Canvas editor, or write out the full text as the alt description so students using assistive technology can access it.' };
           imagesOfText.push(issue);
-          pageAltIssues.push({ loc, url: pUrl, issue: issue.issue, fix: issue.fix });
+          pageAltIssues.push({ loc, url: pUrl, pagePath, locatorId: lid, issue: issue.issue, fix: issue.fix });
         }
       }
     });
@@ -1801,7 +2153,7 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOr
           }
         });
         if (rawIssues.length > 0) {
-          rawIssues.forEach(i => missingAlt.push({ loc, url: pUrl, ...i }));
+          rawIssues.forEach(i => missingAlt.push({ loc, url: pUrl, pagePath, locatorId: null, ...i }));
         }
         pf.findings.push({
           checkLabel: 'Image alt text',
@@ -1822,13 +2174,15 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOr
       const aria = a.getAttribute('aria-label') || '';
       if (aria) return; // aria-label present — skip
       if (!txt || /^(click here|here|link|read more|more|this|download)$/i.test(txt)) {
-        const issue = { loc, url: pUrl, issue: `Non-descriptive link text: "${txt || '(empty)'}"`, fix: 'In Canvas, highlight the link text and retype it to describe where the link goes — for example, "Download the Week 2 reading (PDF)" instead of "click here." Students using screen readers hear link text out of context, so every link should make sense on its own.' };
+        const lid = tagEl(a);
+        const issue = { loc, url: pUrl, pagePath, locatorId: lid, issue: `Non-descriptive link text: "${txt || '(empty)'}"`, fix: 'In Canvas, highlight the link text and retype it to describe where the link goes — for example, "Download the Week 2 reading (PDF)" instead of "click here." Students using screen readers hear link text out of context, so every link should make sense on its own.' };
         badLinks.push(issue);
-        pageLinkIssues.push({ loc, url: pUrl, issue: issue.issue, fix: issue.fix });
+        pageLinkIssues.push({ loc, url: pUrl, pagePath, locatorId: lid, issue: issue.issue, fix: issue.fix });
       } else if (looksLikeUrl(txt)) {
-        const issue = { loc, url: pUrl, issue: `Link text is a raw URL: "${txt.length > 60 ? txt.substring(0,60)+'…' : txt}"`, fix: 'In Canvas, select the URL text in the editor, then use the link tool to give it a descriptive label. For example, display "ASU Writing Center" rather than the full web address. Descriptive link text is easier to read and helps screen reader users navigate the page.' };
+        const lid = tagEl(a);
+        const issue = { loc, url: pUrl, pagePath, locatorId: lid, issue: `Link text is a raw URL: "${txt.length > 60 ? txt.substring(0,60)+'…' : txt}"`, fix: 'In Canvas, select the URL text in the editor, then use the link tool to give it a descriptive label. For example, display "ASU Writing Center" rather than the full web address. Descriptive link text is easier to read and helps screen reader users navigate the page.' };
         badLinks.push(issue);
-        pageLinkIssues.push({ loc, url: pUrl, issue: issue.issue, fix: issue.fix });
+        pageLinkIssues.push({ loc, url: pUrl, pagePath, locatorId: lid, issue: issue.issue, fix: issue.fix });
       }
     });
     if (links.length > 0) {
@@ -1850,15 +2204,17 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOr
       if (!headers.length) {
         const firstCell = tbl.querySelector('td');
         const snippet = firstCell ? firstWords(firstCell.textContent, 3) : '';
-        const issue = { loc, url: pUrl, issue: `Data table found with no <th> header cells${snippet ? ` (first cell: ${snippet})` : ''}`, fix: 'This table is missing header labels. In the Canvas rich-text editor, click inside the table, then use the Table menu to designate the first row (or column) as a header row. This helps screen readers announce which column or row each cell belongs to, so students with disabilities can navigate the table.' };
+        const lid = tagEl(tbl);
+        const issue = { loc, url: pUrl, pagePath, locatorId: lid, issue: `Data table found with no <th> header cells${snippet ? ` (first cell: ${snippet})` : ''}`, fix: 'This table is missing header labels. In the Canvas rich-text editor, click inside the table, then use the Table menu to designate the first row (or column) as a header row. This helps screen readers announce which column or row each cell belongs to, so students with disabilities can navigate the table.' };
         tableIssues.push(issue);
-        pageTableIssues.push({ loc, url: pUrl, issue: issue.issue, fix: issue.fix });
+        pageTableIssues.push({ loc, url: pUrl, pagePath, locatorId: lid, issue: issue.issue, fix: issue.fix });
       } else if (!scope) {
         const firstHeader = tbl.querySelector('th');
         const snippet = firstHeader ? firstWords(firstHeader.textContent, 3) : '';
-        const issue = { loc, url: pUrl, issue: `Table has <th> headers but no scope attribute${snippet ? ` (first header: ${snippet})` : ''}`, fix: 'The table has header cells but they\'re missing a "scope" attribute that tells screen readers whether each header applies to a column or a row. If you built the table in the Canvas editor using the header row option, this may have been omitted automatically — try deleting and rebuilding the table using the Canvas table tool, or contact your instructional designer for help adding scope attributes in the HTML source.' };
+        const lid = tagEl(tbl);
+        const issue = { loc, url: pUrl, pagePath, locatorId: lid, issue: `Table has <th> headers but no scope attribute${snippet ? ` (first header: ${snippet})` : ''}`, fix: 'The table has header cells but they\'re missing a "scope" attribute that tells screen readers whether each header applies to a column or a row. If you built the table in the Canvas editor using the header row option, this may have been omitted automatically — try deleting and rebuilding the table using the Canvas table tool, or contact your instructional designer for help adding scope attributes in the HTML source.' };
         tableIssues.push(issue);
-        pageTableIssues.push({ loc, url: pUrl, issue: issue.issue, fix: issue.fix });
+        pageTableIssues.push({ loc, url: pUrl, pagePath, locatorId: lid, issue: issue.issue, fix: issue.fix });
       }
     });
     if (tables.length > 0) {
@@ -1877,18 +2233,19 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOr
     if (headings.length === 0 && doc.body) {
       const wordCount = doc.body.textContent.trim().split(/\s+/).filter(Boolean).length;
       if (wordCount >= 250) {
-        const issue = { loc, url: pUrl, issue: 'Long content page has no heading structure', fix: 'This page has substantial text but no headings to break it up. In the Canvas editor, use the Paragraph Format dropdown to apply Heading 2 or Heading 3 styles to section titles — just like chapters in a textbook. Headings help all students scan the page, and allow students using screen readers to jump directly to the section they need.' };
+        const issue = { loc, url: pUrl, pagePath, locatorId: null, issue: 'Long content page has no heading structure', fix: 'This page has substantial text but no headings to break it up. In the Canvas editor, use the Paragraph Format dropdown to apply Heading 2 or Heading 3 styles to section titles — just like chapters in a textbook. Headings help all students scan the page, and allow students using screen readers to jump directly to the section they need.' };
         missingHeadings.push(issue);
-        pageHeadingIssues.push({ loc, url: pUrl, issue: issue.issue, fix: issue.fix });
+        pageHeadingIssues.push({ loc, url: pUrl, pagePath, locatorId: null, issue: issue.issue, fix: issue.fix });
       }
     }
     let prevLevel = 0;
     headings.forEach(h => {
       const level = parseInt(h.tagName[1]);
       if (level > prevLevel + 1 && prevLevel > 0) {
-        const issue = { loc, url: pUrl, issue: `Heading level skipped: H${prevLevel} → H${level} ("${h.textContent.trim().substring(0,40)}")`, fix: `Heading levels should go in order — H1, then H2, then H3 — without skipping. Think of them like an outline: you wouldn't jump from a chapter title straight to a sub-sub-section. In the Canvas editor, change this heading from H${level} to H${prevLevel+1} to keep the structure logical for screen reader users.` };
+        const lid = tagEl(h);
+        const issue = { loc, url: pUrl, pagePath, locatorId: lid, issue: `Heading level skipped: H${prevLevel} → H${level} ("${h.textContent.trim().substring(0,40)}")`, fix: `Heading levels should go in order — H1, then H2, then H3 — without skipping. Think of them like an outline: you wouldn't jump from a chapter title straight to a sub-sub-section. In the Canvas editor, change this heading from H${level} to H${prevLevel+1} to keep the structure logical for screen reader users.` };
         missingHeadings.push(issue);
-        pageHeadingIssues.push({ loc, url: pUrl, issue: issue.issue, fix: issue.fix });
+        pageHeadingIssues.push({ loc, url: pUrl, pagePath, locatorId: lid, issue: issue.issue, fix: issue.fix });
       }
       prevLevel = level;
     });
@@ -1905,10 +2262,10 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOr
     contrastInspectedElements += styledEls.length;
     if (styledEls.length > 0) contrastCheckedPages++;
 
-    const pageContrastIssues = checkPageContrast(doc, loc, pUrl);
+    const pageContrastIssues = checkPageContrast(doc, loc, pUrl, pagePath, tagEl);
     contrastIssues.push(...pageContrastIssues);
 
-    const pageContrastIssuesClean = pageContrastIssues.map(i => ({ loc: i.loc, url: i.url, issue: i.issue, fix: i.fix, fgHex: i.fgHex, bgHex: i.bgHex, ratio: i.ratio, threshold: i.threshold }));
+    const pageContrastIssuesClean = pageContrastIssues.map(i => ({ loc: i.loc, url: i.url, pagePath: i.pagePath, locatorId: i.locatorId, issue: i.issue, fix: i.fix, fgHex: i.fgHex, bgHex: i.bgHex, ratio: i.ratio, threshold: i.threshold }));
     if (styledEls.length > 0 || pageContrastIssues.length > 0) {
       pf.findings.push({
         checkLabel: 'Color contrast',
@@ -1918,6 +2275,10 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOr
         issues: pageContrastIssuesClean
       });
     }
+
+    // Capture the fully tagged, script-stripped body HTML for this page so the
+    // page preview panel can render it later and highlight any flagged element.
+    pageBodyMap[pagePath] = doc.body ? doc.body.innerHTML : page.content;
   }
 
   // ── Build byModule from pageFindings ─────────────────────────────────────
@@ -2144,6 +2505,7 @@ async function performAudit(zip, pages, mediaFiles, imageFiles, xmlDoc, moduleOr
       checks: [{ status: 'warn', title: 'Manual review required', detail: "If your course links to external websites, open educational resources, or third-party content, check that those resources are reasonably accessible before requiring students to use them. Test each linked site using a free tool such as WAVE (wave.webaim.org) or simply try navigating it using only a keyboard. Be especially cautious about requiring students to use sites that have login walls, time limits, or complex interactive interfaces. Where an external resource has accessibility barriers you cannot control, note the issue in your course and offer an equivalent alternative.", wcag: 'WCAG 2.1.1, 1.4.3 Level A/AA', issues: [] }]
     },
   ];
+  results.pageBodyMap = pageBodyMap;
   return results;
 }
 
@@ -2186,6 +2548,7 @@ function filterResults(f, btn) {
 function renderResults() {
   document.getElementById('upload-area').style.display = 'none';
   document.getElementById('results').style.display = 'block';
+  document.body.classList.add('results-visible');
   window.scrollTo({ top: 0, behavior: 'instant' });
 
   // Show course title if available
@@ -2335,11 +2698,12 @@ function renderCheck(c, secId, checkIdx) {
   const icon = c.status === 'ignore' ? ignoreIcon : (icons[c.status] || icons.warn);
 
   // Helper: render buttons inside an issue card
-  function issueButtons(id) {
+  function issueButtons(id, i) {
     const done = !!clChecked[id], ign = !!issueIgnored[id];
-    if (done) return `<div class="issue-actions"><button class="check-action-btn" onclick="undoIssueOverride('${id}')">↩ Undo</button></div>`;
-    if (ign)  return `<div class="issue-actions"><button class="check-action-btn" onclick="undoIssueOverride('${id}')">↩ Undo ignore</button></div>`;
-    return `<div class="issue-actions"><button class="check-action-btn complete" onclick="markIssueComplete('${id}')">✓ Mark complete</button><button class="check-action-btn" onclick="markIssueIgnore('${id}')">Ignore</button></div>`;
+    const viewBtn = i ? viewInPageBtn(i.pagePath, i.locatorId, id) : '';
+    if (done) return `<div class="issue-actions">${viewBtn}<button class="check-action-btn" onclick="event.stopPropagation();undoIssueOverride('${id}')">↩ Undo</button></div>`;
+    if (ign)  return `<div class="issue-actions">${viewBtn}<button class="check-action-btn" onclick="event.stopPropagation();undoIssueOverride('${id}')">↩ Undo ignore</button></div>`;
+    return `<div class="issue-actions">${viewBtn}<button class="check-action-btn complete" onclick="event.stopPropagation();markIssueComplete('${id}')">✓ Mark complete</button><button class="check-action-btn" onclick="event.stopPropagation();markIssueIgnore('${id}')">Ignore</button></div>`;
   }
   function issueStateClass(id) {
     if (clChecked[id]) return ' is-done';
@@ -2369,12 +2733,13 @@ function renderCheck(c, secId, checkIdx) {
          </a>`
       : `<span class="issue-loc">${escHtml(i.loc||'Manual check')}</span>`;
     const id = i._clId;
-    return `<div class="${c.status==='fail'?'issue-item':'warn-item'}${issueStateClass(id)}" id="iss-${id}">
+    return `<div class="${c.status==='fail'?'issue-item':'warn-item'}${issueStateClass(id)}" id="iss-${id}"${pvCardAttrs(i.pagePath, i.locatorId, id)}>
       ${locHtml}
       <div class="issue-desc">${i.issue}</div>
       ${swatchHtml}
       ${i.fix?`<div class="issue-fix">Suggestion: ${i.fix}</div>`:''}
-      ${issueButtons(id)}
+      ${_noteHtml(id)}
+      ${issueButtons(id, i)}
     </div>`;
   }).join('') : '';
 
@@ -2641,8 +3006,10 @@ function renderPageBlock(page, pid, filter) {
     ? `<span style="font-size:11px;font-style:italic;font-weight:400;color:var(--c-ink-ghost);margin-left:4px">Unpublished</span>`
     : '';
 
+  const pvIdx = (page.pagePath && pathIndex[page.pagePath] !== undefined) ? pathIndex[page.pagePath] : null;
+
   return `<div class="page-block">
-    <div class="page-hdr" onclick="togglePage('${pid}')">
+    <div class="page-hdr" onclick="pvPageHeaderClick('${pid}', ${pvIdx === null ? 'null' : pvIdx})">
       <h4>${smallIcon} ${escHtml(page.pageName)} ${typeTag} ${linkHtml}${unpublishedTag}</h4>
       <div style="display:flex;align-items:center;gap:6px">
         <div class="badges">${badgesHtml}</div>
@@ -2664,11 +3031,12 @@ function renderFinding(f) {
   };
 
   // Helper: per-issue buttons and state class
-  function issueButtons(id) {
+  function issueButtons(id, iss) {
     const done = !!clChecked[id], ign = !!issueIgnored[id];
-    if (done) return `<div class="issue-actions"><button class="check-action-btn" onclick="undoIssueOverride('${id}')">↩ Undo</button></div>`;
-    if (ign)  return `<div class="issue-actions"><button class="check-action-btn" onclick="undoIssueOverride('${id}')">↩ Undo ignore</button></div>`;
-    return `<div class="issue-actions"><button class="check-action-btn complete" onclick="markIssueComplete('${id}')">✓ Mark complete</button><button class="check-action-btn" onclick="markIssueIgnore('${id}')">Ignore</button></div>`;
+    const viewBtn = iss ? viewInPageBtn(iss.pagePath, iss.locatorId, id) : '';
+    if (done) return `<div class="issue-actions">${viewBtn}<button class="check-action-btn" onclick="event.stopPropagation();undoIssueOverride('${id}')">↩ Undo</button></div>`;
+    if (ign)  return `<div class="issue-actions">${viewBtn}<button class="check-action-btn" onclick="event.stopPropagation();undoIssueOverride('${id}')">↩ Undo ignore</button></div>`;
+    return `<div class="issue-actions">${viewBtn}<button class="check-action-btn complete" onclick="event.stopPropagation();markIssueComplete('${id}')">✓ Mark complete</button><button class="check-action-btn" onclick="event.stopPropagation();markIssueIgnore('${id}')">Ignore</button></div>`;
   }
   function issueStateClass(id) {
     if (clChecked[id]) return ' is-done';
@@ -2688,11 +3056,12 @@ function renderFinding(f) {
       : '';
     const cls = f.status === 'fail' ? 'mod-issue-item' : 'mod-warn-item';
     const id = iss._clId;
-    return `<div class="${cls}${issueStateClass(id)}" id="iss-${id}">
+    return `<div class="${cls}${issueStateClass(id)}" id="iss-${id}"${pvCardAttrs(iss.pagePath, iss.locatorId, id)}>
       <span class="cl-inline-text">${escHtml(iss.issue)}</span>
       ${swatchHtml}
       ${iss.fix ? `<div class="fix">Suggestion: ${escHtml(iss.fix)}</div>` : ''}
-      ${issueButtons(id)}
+      ${_noteHtml(id)}
+      ${issueButtons(id, iss)}
     </div>`;
   }).join('') : '';
 
@@ -2745,9 +3114,466 @@ function togglePage(id) {
   chev.classList.toggle('open', !hidden);
 }
 
+// Clicking a page's accordion header (By Module view) expands/collapses its
+// findings AND updates the preview pane — but only if the pane is already open.
+// The slide-out tab is the entry point for opening it.
+function pvPageHeaderClick(pid, idx) {
+  togglePage(pid);
+  if (idx !== null && idx !== undefined && document.body.classList.contains('pv-open')) {
+    openPageViewer(idx, '', '');
+  }
+}
+
 // Escapes a string for safe insertion into HTML attribute values and text content.
 function escHtml(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Page preview (side-by-side rendered view with issue highlighting) ───────
+// Walks every issue in the audit result and groups all flagged locatorIds by
+// page path, so the preview can dim-highlight every known issue on a page at
+// once (not just the currently selected one).
+function buildPageLocatorMap(audit) {
+  const map = {};
+  pvLocatorToClIds = {};  // reset reverse map each audit
+
+  function addIssue(iss) {
+    if (!iss || !iss.pagePath || !iss.locatorId) return;
+    // Forward map: pagePath → Set<locatorId>
+    if (!map[iss.pagePath]) map[iss.pagePath] = new Set();
+    map[iss.pagePath].add(iss.locatorId);
+    // Reverse map: locatorId → [_clId, ...]
+    // Multiple checks can flag the same element (same locatorId), so we collect all _clIds
+    if (iss._clId) {
+      if (!pvLocatorToClIds[iss.locatorId]) pvLocatorToClIds[iss.locatorId] = [];
+      if (!pvLocatorToClIds[iss.locatorId].includes(iss._clId)) {
+        pvLocatorToClIds[iss.locatorId].push(iss._clId);
+      }
+    }
+  }
+  // byModule: { 'Module Name': [pageObj, pageObj, ...], ... }
+  // Object.values gives page arrays directly — NOT objects with a .pages property.
+  if (audit.byModule) {
+    for (const pageArray of Object.values(audit.byModule)) {
+      for (const page of pageArray) {
+        for (const finding of page.findings || []) {
+          for (const iss of finding.issues || []) addIssue(iss);
+        }
+      }
+    }
+  }
+  // sections: flat check-type view — issue objects may be distinct from byModule ones
+  // (stamped with their own _clIds), so scan both to capture all possible _clId references.
+  if (audit.sections) {
+    for (const sec of audit.sections) {
+      for (const chk of sec.checks || []) {
+        for (const iss of chk.issues || []) addIssue(iss);
+      }
+    }
+  }
+  // Convert Sets → Arrays for easy iteration
+  return Object.fromEntries(Object.entries(map).map(([k, v]) => [k, [...v]]));
+}
+
+// Builds the path → page lookup used by the preview panel, plus an integer
+// index for each path so onclick handlers never have to embed a raw (and
+// potentially quote-containing) file path.
+function buildPagesByPath(pages, pageBodyMap) {
+  pagesByPath = {}; pathIndex = {}; indexToPath = [];
+  pages.forEach((p, i) => {
+    pagesByPath[p.path] = {
+      path: p.path,
+      name: p.name,
+      module: p.module,
+      bodyHTML: (pageBodyMap && pageBodyMap[p.path] != null) ? pageBodyMap[p.path] : p.content
+    };
+    pathIndex[p.path] = i;
+    indexToPath[i] = p.path;
+  });
+}
+
+// Renders a small "View in page" button for an issue, if it carries a pagePath
+// that exists in the current audit's page index. Returns '' otherwise.
+function viewInPageBtn(pagePath, locatorId, clId) {
+  if (!pagePath || pathIndex[pagePath] === undefined) return '';
+  return `<button type="button" class="check-action-btn" onclick="event.stopPropagation();pvNavigateIfOpen(${pathIndex[pagePath]}, '${locatorId || ''}', '${clId || ''}')" title="Highlight this in the rendered page"><svg width="11" height="11" viewBox="0 0 14 14" fill="none" style="vertical-align:-1px;margin-right:3px"><path d="M1 7s2.2-4 6-4 6 4 6 4-2.2 4-6 4-6-4-6-4z" stroke="currentColor" stroke-width="1.2"/><circle cx="7" cy="7" r="1.6" stroke="currentColor" stroke-width="1.2"/></svg>View in page</button>`;
+}
+
+// Returns an onclick + cursor attribute string for making an entire issue card
+// clickable. Only navigates if the preview pane is already open.
+function pvCardAttrs(pagePath, locatorId, clId) {
+  if (!pagePath || pathIndex[pagePath] === undefined) return '';
+  return ` onclick="pvNavigateIfOpen(${pathIndex[pagePath]}, '${locatorId || ''}', '${clId || ''}')" style="cursor:pointer"`;
+}
+
+// Navigate the preview pane to a specific page/element — but only if the pane
+// is already open. The slide-out tab (or toolbar toggle) is the sole entry
+// point for opening the pane; issue cards and page headers don't force it open.
+function pvNavigateIfOpen(idx, locatorId, clId) {
+  if (!document.body.classList.contains('pv-open')) return;
+  openPageViewer(idx, locatorId || '', clId || '');
+}
+
+function populatePageSelect(selectedIdx) {
+  const sel = document.getElementById('pv-page-select');
+  sel.innerHTML = indexToPath.map((path, i) => {
+    const pg = pagesByPath[path];
+    return `<option value="${i}">${escHtml(pg.module)} → ${escHtml(pg.name)}</option>`;
+  }).join('');
+  sel.value = selectedIdx;
+}
+
+// Minimal readable defaults for the preview iframe — Canvas exports are page
+// fragments with little or no styling of their own — plus the highlight rule.
+const PV_BASE_CSS = `
+/* ── ASU Canvas brand fonts ─────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap');
+
+/* ── ASU Canvas brand variables ─────────────────────────────────────────── */
+:root {
+  --ic-brand-primary:                            #8C1D40;
+  --ic-brand-primary-darkened-5:                 #851C3D;
+  --ic-brand-primary-darkened-10:                #7E1B3A;
+  --ic-brand-primary-darkened-15:                #771937;
+  --ic-brand-primary-lightened-5:                #912849;
+  --ic-brand-primary-lightened-10:               #973353;
+  --ic-brand-primary-lightened-15:               #9D3E5C;
+  --ic-brand-font-color-dark:                    #273540;
+  --ic-brand-font-color-dark-lightened-15:       #47535C;
+  --ic-brand-font-color-dark-lightened-28:       #636D75;
+  --ic-link-color:                               #8C1D40;
+  --ic-link-color-darkened-10:                   #7E1B3A;
+  --ic-link-color-lightened-10:                  #973353;
+  --ic-brand-button--primary-bgd:                #8C1D40;
+  --ic-brand-button--primary-text:               #FFFFFF;
+  --ic-brand-button--primary-bgd-darkened-5:     #851C3D;
+  --ic-brand-button--primary-bgd-darkened-15:    #771937;
+  --ic-brand-button--secondary-bgd:              #FFC425;
+  --ic-brand-button--secondary-text:             #000000;
+  --ic-brand-button--secondary-bgd-darkened-5:   #F3BB24;
+  --ic-brand-button--secondary-bgd-darkened-15:  #D9A720;
+  --ic-brand-global-nav-bgd:                     #353535;
+  --ic-brand-Login-body-bgd-color:               #334451;
+  --ic-brand-Login-body-bgd-shadow-color:        #273540;
+}
+
+/* ── Canvas base typography ─────────────────────────────────────────────── */
+html, body {
+  font-family: "Lato Extended", "Lato", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ic-brand-font-color-dark, #273540);
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+}
+
+/* ── Layout ─────────────────────────────────────────────────────────────── */
+body {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px 20px;
+  word-wrap: break-word;
+  background: #fff;
+}
+
+/* ── Links ──────────────────────────────────────────────────────────────── */
+a { color: var(--ic-link-color, #8C1D40); }
+a:hover { color: var(--ic-link-color-darkened-10, #7E1B3A); }
+
+/* ── Headings ───────────────────────────────────────────────────────────── */
+h1,h2,h3,h4,h5,h6 {
+  font-family: "Lato Extended", "Lato", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-top: 1.2em;
+  margin-bottom: .4em;
+  color: var(--ic-brand-font-color-dark, #273540);
+}
+
+/* ── Images ─────────────────────────────────────────────────────────────── */
+img { max-width: 100%; height: auto; }
+
+/* ── Tables ─────────────────────────────────────────────────────────────── */
+table  { border-collapse: collapse; width: 100%; margin: 1em 0; }
+th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: left; }
+th     { background: #f1f1f1; font-weight: 700; }
+
+/* ── Canvas-style buttons ───────────────────────────────────────────────── */
+.btn, button:not([class]) {
+  display: inline-block;
+  padding: 8px 14px;
+  border-radius: 3px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  background: var(--ic-brand-button--primary-bgd, #8C1D40);
+  color: var(--ic-brand-button--primary-text, #fff);
+  border: 1px solid transparent;
+}
+
+/* ── Accessibility markers ───────────────────────────────────────────────── */
+/*
+  Both markers use a "double-ring sandwich":
+    white inner ring → colored ring → subtle dark outer edge
+  This keeps the marker legible against any background — light, dark, or
+  the same hue as the highlight color — because there is always a contrasting
+  separator between the element's own background and the colored ring.
+*/
+
+/* All flagged elements on the page — amber passive marker */
+[data-a11y-id].a11y-issue {
+  border-radius: 2px;
+  box-shadow:
+    0 0 0 2.5px rgba(255, 255, 255, 0.92),   /* white separator (visible on dark bg) */
+    0 0 0 5px   #f59e0b,                       /* amber ring */
+    0 0 0 6px   rgba(0, 0, 0, 0.18);          /* dark outer edge (visible on light bg) */
+}
+
+/* The most recently selected issue — red active marker, stronger emphasis */
+[data-a11y-id].a11y-highlight {
+  border-radius: 2px;
+  background: rgba(220, 38, 38, 0.07);
+  box-shadow:
+    0 0 0 2.5px rgba(255, 255, 255, 0.95),   /* white separator */
+    0 0 0 5.5px #dc2626,                       /* red ring */
+    0 0 0 6.5px rgba(0, 0, 0, 0.20),          /* dark outer edge */
+    0 0 0 10px  rgba(220, 38, 38, 0.18);      /* soft red glow for extra pop */
+}
+`;
+
+
+function guessMime(name) {
+  const ext = (name.split('.').pop() || '').toLowerCase();
+  const map = { jpg:'image/jpeg', jpeg:'image/jpeg', png:'image/png', gif:'image/gif', svg:'image/svg+xml', webp:'image/webp', bmp:'image/bmp' };
+  return map[ext] || 'image/png';
+}
+
+// Resolves a relative image src against the directory of its page, handling "../" segments.
+function resolveRelativePath(dir, src) {
+  const combined = (dir + src.replace(/^\.\//, '')).split('/');
+  const stack = [];
+  for (const part of combined) {
+    if (part === '' || part === '.') continue;
+    if (part === '..') stack.pop();
+    else stack.push(part);
+  }
+  return stack.join('/');
+}
+
+function findZipImage(resolvedPath, originalSrc) {
+  if (!lastZip) return null;
+  if (lastZip.files[resolvedPath]) return lastZip.files[resolvedPath];
+  try {
+    const decoded = decodeURIComponent(resolvedPath);
+    if (lastZip.files[decoded]) return lastZip.files[decoded];
+  } catch(e) {}
+  const basename = originalSrc.split('/').pop().split('?')[0];
+  const match = Object.keys(lastZip.files).find(k => k.endsWith('/' + basename) || k === basename);
+  return match ? lastZip.files[match] : null;
+}
+
+// Rewrites relative <img src> attributes in a page's body HTML to base64 data
+// URIs pulled from the original zip, so images render inside the sandboxed
+// preview iframe (which has no network access to the course's relative paths).
+async function rewriteImageSources(bodyHTML, pagePath) {
+  const dir = pagePath.includes('/') ? pagePath.slice(0, pagePath.lastIndexOf('/') + 1) : '';
+  const tempDoc = new DOMParser().parseFromString(`<div id="a11y-pv-root">${bodyHTML}</div>`, 'text/html');
+  const imgs = tempDoc.querySelectorAll('img');
+  for (const img of imgs) {
+    const src = img.getAttribute('src') || img.getAttribute('data-src') || img.getAttribute('data-lazy-src');
+    if (!src || src.startsWith('data:') || /^https?:\/\//i.test(src)) continue;
+    const resolved = resolveRelativePath(dir, src);
+    const file = findZipImage(resolved, src);
+    if (file) {
+      try {
+        const b64 = await file.async('base64');
+        img.setAttribute('src', `data:${guessMime(file.name)};base64,${b64}`);
+      } catch(e) {}
+    }
+  }
+  const root = tempDoc.getElementById('a11y-pv-root');
+  return root ? root.innerHTML : bodyHTML;
+}
+
+async function getRenderablePageHTML(path) {
+  if (pvRenderCache.has(path)) return pvRenderCache.get(path);
+  const page = pagesByPath[path];
+  if (!page) return '<p style="padding:2rem;color:#888">Page not found.</p>';
+  const body = await rewriteImageSources(page.bodyHTML, path);
+  // Inject a delegated click listener. Because allow-same-origin is set and all
+  // Canvas course scripts are stripped, we can call window.parent directly —
+  // simpler and more reliable than postMessage across iframe nesting layers.
+  const clickBridge = `<script>
+    document.addEventListener('click', function(e) {
+      var el = e.target.closest('[data-a11y-id]');
+      if (!el) return;
+      if (!el.classList.contains('a11y-issue') && !el.classList.contains('a11y-highlight')) return;
+      e.preventDefault();
+      try {
+        window.parent.pvHandleIframeClick(el.getAttribute('data-a11y-id'));
+      } catch(err) {
+        window.parent.postMessage({ type: 'a11y-element-click', locatorId: el.getAttribute('data-a11y-id') }, '*');
+      }
+    });
+  <\/script>`;
+  const full = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${PV_BASE_CSS}</style></head><body>${body}${clickBridge}</body></html>`;
+  pvRenderCache.set(path, full);
+  return full;
+}
+
+function applyPvHighlight(locatorId) {
+  const iframe = document.getElementById('pv-iframe');
+  const doc = iframe.contentDocument;
+  if (!doc) return;
+
+  // Strip all previous markers
+  doc.querySelectorAll('.a11y-highlight, .a11y-issue').forEach(el => {
+    el.classList.remove('a11y-highlight', 'a11y-issue');
+  });
+
+  // Apply passive "issue exists" marker to every flagged element on this page
+  const allIds = (pvCurrentPath && pageLocatorMap[pvCurrentPath]) || [];
+  allIds.forEach(id => {
+    if (id === locatorId) return; // active one handled separately below
+    const el = doc.querySelector(`[data-a11y-id="${id}"]`);
+    if (el) el.classList.add('a11y-issue');
+  });
+
+  // Apply the active "currently selected" marker and scroll to it
+  if (!locatorId) return;
+  const el = doc.querySelector(`[data-a11y-id="${locatorId}"]`);
+  if (!el) return;
+  el.classList.add('a11y-highlight');
+
+  const win = iframe.contentWindow || window;
+  const scrollToEl = () => el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  if (win.requestAnimationFrame) {
+    win.requestAnimationFrame(() => win.requestAnimationFrame(scrollToEl));
+  } else {
+    setTimeout(scrollToEl, 30);
+  }
+}
+
+async function loadPageIntoViewer(idx, locatorId) {
+  const path = indexToPath[idx];
+  const page = pagesByPath[path];
+  if (!page) return;
+
+  // Claim this call as the most recent click and record the intended path
+  // immediately (before any await) — clicking through several issues in quick
+  // succession otherwise lets an earlier, still-in-flight load finish after a
+  // later click and overwrite it with the wrong page.
+  const myToken = ++pvLoadToken;
+  const needsReload = pvCurrentPath !== path;
+  pvCurrentPath = path;
+
+  if (needsReload) {
+    const html = await getRenderablePageHTML(path);
+    if (myToken !== pvLoadToken) return; // superseded by a newer click — abandon
+    const iframe = document.getElementById('pv-iframe');
+    await new Promise(resolve => {
+      iframe.onload = resolve;
+      iframe.srcdoc = html;
+    });
+    if (myToken !== pvLoadToken) return; // superseded while loading — abandon
+  }
+
+  if (myToken !== pvLoadToken) return;
+  applyPvHighlight(locatorId);
+}
+
+function togglePageViewer() {
+  const isOpen = document.body.classList.contains('pv-open');
+  if (isOpen) { closePageViewer(); }
+  else if (indexToPath.length > 0) { openPageViewer(0, ''); }
+}
+
+function openPageViewer(idx, locatorId, clId) {
+  if (!pagesByPath[indexToPath[idx]]) return;
+  document.body.classList.add('pv-open');
+  document.getElementById('preview-toggle-btn').classList.add('active');
+  populatePageSelect(idx);
+  loadPageIntoViewer(idx, locatorId || '');
+  setPvSelected(clId || null);
+}
+
+// Moves the "currently shown in preview" highlight from one issue card to
+// another in the results list (works across both the By Module and By Check
+// Type views, and survives whichever filter/accordion state is open).
+function setPvSelected(clId) {
+  if (pvSelectedClId) {
+    document.querySelectorAll('[id="iss-' + pvSelectedClId + '"]').forEach(el => el.classList.remove('pv-selected'));
+  }
+  pvSelectedClId = clId || null;
+  if (pvSelectedClId) {
+    document.querySelectorAll('[id="iss-' + pvSelectedClId + '"]').forEach(el => el.classList.add('pv-selected'));
+  }
+}
+
+function closePageViewer() {
+  document.body.classList.remove('pv-open');
+  document.getElementById('preview-toggle-btn').classList.remove('active');
+  pvLoadToken++; // invalidate any load still in flight so it can't finish after close
+  const iframe = document.getElementById('pv-iframe');
+  if (iframe) iframe.srcdoc = '';
+  pvCurrentPath = null;
+  setPvSelected(null);
+}
+
+document.getElementById('pv-page-select').addEventListener('change', function() {
+  setPvSelected(null);
+  loadPageIntoViewer(parseInt(this.value, 10), '');
+});
+
+// ── Iframe → list: clicking a flagged element in the preview selects the
+//    corresponding issue card in the results list. ─────────────────────────
+
+// Exposed directly on window so the sandboxed iframe can call it via
+// window.parent.pvHandleIframeClick() when allow-same-origin is active.
+window.pvHandleIframeClick = function(locatorId) {
+  if (!locatorId) return;
+  const clIds = pvLocatorToClIds[locatorId];
+  if (!clIds || !clIds.length) return;
+  // Prefer the first _clId whose card is currently visible in the DOM —
+  // the active view (By Module vs By Check Type) determines which set is rendered.
+  let targetClId = null;
+  for (const clId of clIds) {
+    if (document.getElementById('iss-' + clId)) { targetClId = clId; break; }
+  }
+  if (!targetClId) return;
+  setPvSelected(targetClId);
+  applyPvHighlight(locatorId);
+  scrollToIssueCard(targetClId);
+};
+
+// Fallback: postMessage path for environments where window.parent is cross-origin.
+window.addEventListener('message', function(e) {
+  if (!e.data || e.data.type !== 'a11y-element-click') return;
+  window.pvHandleIframeClick(e.data.locatorId);
+});
+
+// Scrolls the issue card with the given _clId into view in the results list,
+// expanding any collapsed accordion sections it's inside first.
+function scrollToIssueCard(clId) {
+  const card = document.getElementById('iss-' + clId);
+  if (!card) return;
+
+  // Walk up the DOM and show any collapsed .page-body / .section-body ancestors
+  let ancestor = card.parentElement;
+  while (ancestor) {
+    if ((ancestor.classList.contains('page-body') || ancestor.classList.contains('section-body'))
+        && ancestor.style.display === 'none') {
+      ancestor.style.display = '';
+      // Also flip the matching chevron icon
+      const chevId = ancestor.id.replace(/^body-/, 'chev-');
+      const chev = document.getElementById(chevId);
+      if (chev) chev.classList.add('open');
+    }
+    ancestor = ancestor.parentElement;
+  }
+
+  card.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 
 // ── PDF export ───────────────────────────────────────────────────────────────
@@ -3344,35 +4170,77 @@ function pdfChecksView(doc, W, M, CW, startY) {
 // The file records the course filename and every checked item ID so it can be
 // re-imported on a future visit.
 async function saveProgress() {
-  const doneIds = Object.entries(clChecked)
-    .filter(([, v]) => v)
-    .map(([k]) => k);
+  const doneIds    = new Set(Object.entries(clChecked).filter(([,v]) => v).map(([k]) => k));
+  const ignoredIds = new Set(Object.entries(issueIgnored).filter(([,v]) => v).map(([k]) => k));
 
-  const ignoredIds = Object.keys(issueIgnored).filter(k => issueIgnored[k]);
-
-  if (doneIds.length === 0 && ignoredIds.length === 0) {
+  if (doneIds.size === 0 && ignoredIds.size === 0) {
     alert('No items have been marked yet — nothing to save.');
     return;
   }
-
   if (!fileObj) {
     alert('Original course file not found — please re-upload your Canvas export and try again.');
     return;
   }
 
-  // Build a progress metadata object
+  // Build content fingerprints for each done/ignored issue.
+  // Fingerprints are based on (pagePath, checkLabel, issue text, nth-occurrence) so they
+  // survive re-runs even if the sequential _clId counter shifts due to ordering changes.
+  const doneFingerprints    = [];
+  const ignoredFingerprints = [];
+  const fpCount = {};
+
+  function collectFingerprint(iss, checkLabel) {
+    if (!iss || !iss._clId) return;
+    const base = `${iss.pagePath || ''}|||${checkLabel || ''}|||${(iss.issue || '').slice(0, 300)}`;
+    const n    = fpCount[base] = (fpCount[base] === undefined ? 0 : fpCount[base] + 1);
+    const fp   = n === 0 ? base : `${base}|||#${n}`;
+    if (doneIds.has(iss._clId))    doneFingerprints.push(fp);
+    if (ignoredIds.has(iss._clId)) ignoredFingerprints.push(fp);
+  }
+
+  if (auditData && auditData.byModule) {
+    Object.values(auditData.byModule).forEach(pages =>
+      pages.forEach(p => p.findings.forEach(f =>
+        (f.issues || []).forEach(iss => collectFingerprint(iss, f.checkLabel))
+      ))
+    );
+  }
+
+  // Collect notes keyed by fingerprint
+  const notesByFp = {};
+  const fpCount2 = {};
+  if (auditData && auditData.byModule) {
+    Object.values(auditData.byModule).forEach(pages =>
+      pages.forEach(p => p.findings.forEach(f =>
+        (f.issues || []).forEach(iss => {
+          if (!iss._clId || !clNotes[iss._clId]) return;
+          const base = `${iss.pagePath || ''}|||${f.checkLabel || ''}|||${(iss.issue || '').slice(0, 300)}`;
+          const n = fpCount2[base] = (fpCount2[base] === undefined ? 0 : fpCount2[base] + 1);
+          const fp = n === 0 ? base : `${base}|||#${n}`;
+          notesByFp[fp] = clNotes[iss._clId];
+        })
+      ))
+    );
+  }
+
   const progress = {
-    version:    1,
-    savedAt:    new Date().toISOString(),
-    courseFile: fileObj.name,
-    canvasUrl:  canvasBaseUrl || '',
-    checkedIds: doneIds,
-    ignoredIds: ignoredIds,
+    version:              2,
+    savedAt:              new Date().toISOString(),
+    courseFile:           fileObj.name,
+    canvasUrl:            canvasBaseUrl || '',
+    checkedFingerprints:  doneFingerprints,
+    ignoredFingerprints:  ignoredFingerprints,
+    notesByFingerprint:   notesByFp,
+    // v1 fields kept for backward compatibility with older saves
+    checkedIds:           [...doneIds],
+    ignoredIds:           [...ignoredIds],
   };
 
-  // Package the original course file + progress.json into a single zip
+  // Package the original course file + progress.json into a single zip.
+  // Store the inner course zip without re-compressing it (it's already a zip,
+  // so DEFLATE gains nothing and risks byte-level differences on extraction).
   const pkg = new JSZip();
-  pkg.file(fileObj.name, fileObj);
+  pkg.file(fileObj.name, fileObj, { compression: 'STORE' });
   pkg.file('accessibility_progress.json', JSON.stringify(progress, null, 2));
 
   const blob = await pkg.generateAsync({ type: 'blob', compression: 'DEFLATE' });
@@ -3391,9 +4259,12 @@ async function saveProgress() {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-// Holds IDs loaded from a progress file before the audit runs.
-let pendingRestoreIds = [];
-let pendingIgnoredIds = [];
+// Holds IDs/fingerprints loaded from a progress file before the audit runs.
+let pendingRestoreIds      = [];
+let pendingIgnoredIds      = [];
+let pendingCheckedFps      = []; // content-fingerprint restore (v2 saves)
+let pendingIgnoredFps      = [];
+let pendingNotesByFp       = {}; // fingerprint → note text
 
 // Called when the user picks a progress package zip.
 // Extracts the embedded course file and progress JSON, pre-loads the Canvas
@@ -3434,16 +4305,22 @@ async function handleProgressRestore(file) {
       document.getElementById('canvas-url-input').value = data.canvasUrl;
     }
 
-    // Queue the checked and ignored IDs
-    pendingRestoreIds = data.checkedIds;
-    pendingIgnoredIds = Array.isArray(data.ignoredIds) ? data.ignoredIds : [];
+    // Queue the checked and ignored IDs/fingerprints
+    pendingCheckedFps  = Array.isArray(data.checkedFingerprints)  ? data.checkedFingerprints  : [];
+    pendingIgnoredFps  = Array.isArray(data.ignoredFingerprints)  ? data.ignoredFingerprints  : [];
+    pendingNotesByFp   = (data.notesByFingerprint && typeof data.notesByFingerprint === 'object') ? data.notesByFingerprint : {};
+    // v1 fallback: sequential IDs (used when fingerprints aren't present)
+    pendingRestoreIds  = (!pendingCheckedFps.length && Array.isArray(data.checkedIds))  ? data.checkedIds  : [];
+    pendingIgnoredIds  = (!pendingIgnoredFps.length && Array.isArray(data.ignoredIds))  ? data.ignoredIds  : [];
 
     // Show confirmation
     const tag = document.getElementById('progress-restore-name');
     tag.style.display = 'inline-flex';
     tag.style.alignItems = 'center';
     tag.style.gap = '4px';
-    tag.textContent = `Progress loaded — ${data.checkedIds.length} item(s) will be restored`;
+    const total = (pendingCheckedFps.length || pendingRestoreIds.length) +
+                  (pendingIgnoredFps.length || pendingIgnoredIds.length);
+    tag.textContent = `Progress loaded — ${total} item(s) will be restored`;
 
   } catch(err) {
     alert('Could not restore progress: ' + err.message + '\n\nMake sure you are uploading a file saved by the Save progress button.');
@@ -3451,21 +4328,64 @@ async function handleProgressRestore(file) {
   }
 }
 
-// Applies any pending restore IDs after the audit has stamped its _clIds.
-// Called at the end of the audit runner, before renderResults.
+// Applies any pending restore state after the audit has stamped its _clIds.
+// v2 saves: match issues by content fingerprint (robust to ordering changes).
+// v1 saves: fall back to sequential _clId matching.
 function applyPendingRestore() {
-  if (!pendingRestoreIds.length && !pendingIgnoredIds.length) return;
-  pendingRestoreIds.forEach(id => { clChecked[id] = true; });
-  pendingIgnoredIds.forEach(id => { issueIgnored[id] = true; });
-  pendingRestoreIds = [];
-  pendingIgnoredIds = [];
+  const hasFingerprints = pendingCheckedFps.length > 0 || pendingIgnoredFps.length > 0;
+  const hasIds          = pendingRestoreIds.length > 0  || pendingIgnoredIds.length > 0;
+  if (!hasFingerprints && !hasIds) return;
+
+  if (hasFingerprints) {
+    const doneSet    = new Set(pendingCheckedFps);
+    const ignoredSet = new Set(pendingIgnoredFps);
+    const fpCount    = {}; // tracks nth-occurrence for duplicate fingerprints
+
+    function matchIssue(iss, checkLabel) {
+      if (!iss || !iss._clId) return;
+      const base = `${iss.pagePath || ''}|||${checkLabel || ''}|||${(iss.issue || '').slice(0, 300)}`;
+      const n    = fpCount[base] = (fpCount[base] === undefined ? 0 : fpCount[base] + 1);
+      const fp   = n === 0 ? base : `${base}|||#${n}`;
+      if (doneSet.has(fp))    clChecked[iss._clId]    = true;
+      if (ignoredSet.has(fp)) issueIgnored[iss._clId] = true;
+      if (pendingNotesByFp[fp]) {
+        const peers = clSyncMap[iss._clId] || [iss._clId];
+        peers.forEach(pid => { clNotes[pid] = pendingNotesByFp[fp]; });
+      }
+    }
+
+    // Walk byModule in the same order as collectFingerprint used at save time
+    if (auditData && auditData.byModule) {
+      Object.values(auditData.byModule).forEach(pages =>
+        pages.forEach(p => p.findings.forEach(f =>
+          (f.issues || []).forEach(iss => matchIssue(iss, f.checkLabel))
+        ))
+      );
+    }
+
+    pendingCheckedFps = [];
+    pendingIgnoredFps = [];
+    pendingNotesByFp  = {};
+  }
+
+  // v1 fallback: apply saved sequential IDs directly
+  if (hasIds) {
+    pendingRestoreIds.forEach(id => { clChecked[id]    = true; });
+    pendingIgnoredIds.forEach(id => { issueIgnored[id] = true; });
+    pendingRestoreIds = [];
+    pendingIgnoredIds = [];
+  }
 }
 
 // ── Inline Fix Checklist ────────────────────────────────────────────────────
 // Simple key→done map; items identified by a stable hash of label+issue+index
 const clChecked = {};    // id → boolean (complete)
 const issueIgnored = {}; // id → boolean (ignored)
+const clNotes = {};      // id → string (optional note on completed items)
 let clTotalItems = 0;
+let clSyncMap = {};      // id → [all related ids across both views]
+let navQueue  = [];      // ordered list of open issue objects for guided navigation
+let navIdx    = -1;      // current position in navQueue (-1 = not started)
 
 // Returns true if the checklist item with this _clId has been marked as fixed.
 function clIsChecked(id) {
@@ -3556,44 +4476,116 @@ function clSyncAllParentIcons() {
   });
 }
 
+// ── Cross-view state sync ─────────────────────────────────────────────────
+// Groups all _clIds that refer to the same underlying issue across both views
+// so marking one done/ignored automatically updates its counterpart.
+function buildClSyncMap(audit) {
+  const groups = {}; // canonical key → Set<_clId>
+
+  function addIssue(iss, checkLabel) {
+    if (!iss || !iss._clId) return;
+    // Issues with the same locatorId on the same page are the same DOM element;
+    // otherwise fall back to pagePath + checkLabel + issue text.
+    const key = iss.locatorId
+      ? `${iss.pagePath}|||loc|||${iss.locatorId}`
+      : `${iss.pagePath}|||${checkLabel || ''}|||${iss.issue || ''}`;
+    if (!groups[key]) groups[key] = new Set();
+    groups[key].add(iss._clId);
+  }
+
+  if (audit.byModule) {
+    Object.values(audit.byModule).forEach(pages =>
+      pages.forEach(p => p.findings.forEach(f =>
+        (f.issues || []).forEach(iss => addIssue(iss, f.checkLabel))
+      ))
+    );
+  }
+  if (audit.sections) {
+    audit.sections.forEach(sec =>
+      sec.checks.forEach(chk =>
+        (chk.issues || []).forEach(iss => addIssue(iss, chk.checkLabel || sec.label))
+      )
+    );
+  }
+
+  const map = {};
+  for (const group of Object.values(groups)) {
+    const arr = [...group];
+    for (const id of arr) map[id] = arr;
+  }
+  return map;
+}
+
 // ── Per-issue mark complete / ignore ─────────────────────────────────────────
 function _issueActionBtns(id) {
   const done = !!clChecked[id], ign = !!issueIgnored[id];
-  if (done) return `<button class="check-action-btn" onclick="undoIssueOverride('${id}')">↩ Undo</button>`;
-  if (ign)  return `<button class="check-action-btn" onclick="undoIssueOverride('${id}')">↩ Undo ignore</button>`;
-  return `<button class="check-action-btn complete" onclick="markIssueComplete('${id}')">✓ Mark complete</button><button class="check-action-btn" onclick="markIssueIgnore('${id}')">Ignore</button>`;
+  if (done) return `<button class="check-action-btn" onclick="event.stopPropagation();undoIssueOverride('${id}')">↩ Undo</button>`;
+  if (ign)  return `<button class="check-action-btn" onclick="event.stopPropagation();undoIssueOverride('${id}')">↩ Undo ignore</button>`;
+  return `<button class="check-action-btn complete" onclick="event.stopPropagation();markIssueComplete('${id}')">✓ Mark complete</button><button class="check-action-btn" onclick="event.stopPropagation();markIssueIgnore('${id}')">Ignore</button>`;
+}
+
+function _noteHtml(id) {
+  const note = clNotes[id] || '';
+  return `<div class="issue-note-wrap">
+    <textarea class="issue-note-input" placeholder="Add a note…"
+      oninput="saveNote('${id}',this.value)"
+      onkeydown="event.stopPropagation()"
+      onclick="event.stopPropagation()">${escHtml(note)}</textarea>
+  </div>`;
+}
+
+function saveNote(id, text) {
+  // Store the note on all related _clIds so it's visible in both views
+  const peers = clSyncMap[id] || [id];
+  peers.forEach(pid => { clNotes[pid] = text; });
 }
 
 function refreshIssueCard(id) {
-  const isDone = !!clChecked[id], isIgnored = !!issueIgnored[id];
-  document.querySelectorAll('[id="iss-' + id + '"]').forEach(el => {
-    el.classList.toggle('is-done', isDone);
-    el.classList.toggle('is-ignored', isIgnored && !isDone);
-    const actions = el.querySelector('.issue-actions');
-    if (actions) actions.innerHTML = _issueActionBtns(id);
-    clSyncParentIcon(el);
+  // Refresh this card AND all cross-view peers in one pass
+  const peers = clSyncMap[id] || [id];
+  peers.forEach(pid => {
+    const isDone = !!clChecked[pid], isIgnored = !!issueIgnored[pid];
+    document.querySelectorAll('[id="iss-' + pid + '"]').forEach(el => {
+      el.classList.toggle('is-done', isDone);
+      el.classList.toggle('is-ignored', isIgnored && !isDone);
+      const actions = el.querySelector('.issue-actions');
+      if (actions) actions.innerHTML = _issueActionBtns(pid);
+      // Update note area — always present regardless of done/ignored state
+      const noteWrap = el.querySelector('.issue-note-wrap');
+      if (noteWrap) noteWrap.outerHTML = _noteHtml(pid);
+      else {
+        const fix = el.querySelector('.fix, .issue-fix');
+        const actions = el.querySelector('.issue-actions');
+        const target = fix || actions;
+        if (target) target.insertAdjacentHTML('beforebegin', _noteHtml(pid));
+      }
+      clSyncParentIcon(el);
+    });
   });
 }
 
 function markIssueComplete(id) {
-  clChecked[id] = true;
-  delete issueIgnored[id];
+  const peers = clSyncMap[id] || [id];
+  peers.forEach(pid => { clChecked[pid] = true; delete issueIgnored[pid]; });
   refreshIssueCard(id);
   clUpdateProgress();
+  navBuildQueue(); navUpdateUI();
 }
 
 function markIssueIgnore(id) {
-  issueIgnored[id] = true;
-  clChecked[id] = false;
+  const peers = clSyncMap[id] || [id];
+  peers.forEach(pid => { issueIgnored[pid] = true; clChecked[pid] = false; });
   refreshIssueCard(id);
   clUpdateProgress();
+  navBuildQueue(); navUpdateUI();
 }
 
 function undoIssueOverride(id) {
-  clChecked[id] = false;
-  delete issueIgnored[id];
+  const peers = clSyncMap[id] || [id];
+  peers.forEach(pid => { clChecked[pid] = false; delete issueIgnored[pid]; });
   refreshIssueCard(id);
   clUpdateProgress();
+  navBuildQueue(); navUpdateUI();
 }
 
 // clInlineToggle kept as no-op for any legacy references
@@ -3607,10 +4599,106 @@ function clClearAll() {
     el.classList.remove('is-done', 'is-ignored');
     const actions = el.querySelector('.issue-actions');
     if (actions) actions.innerHTML = _issueActionBtns(id);
+    const noteWrap = el.querySelector('.issue-note-wrap');
+    if (noteWrap) noteWrap.remove();
   });
   clSyncAllParentIcons();
   clUpdateProgress();
+  navBuildQueue(); navUpdateUI();
 }
+
+// ── Guided navigation ─────────────────────────────────────────────────────
+// Builds an ordered list of all open (not done, not ignored) issues from
+// byModule so Next / Previous always walks the same sequence as the list.
+function navBuildQueue() {
+  if (!auditData || !auditData.byModule) { navQueue = []; return; }
+  const queue = [];
+  const keys = sortedModuleKeys(auditData.byModule);
+  keys.forEach(key => {
+    const pages = sortedModulePages(key, auditData.byModule[key]);
+    pages.forEach(p => {
+      p.findings.forEach(f => {
+        (f.issues || []).forEach(iss => {
+          if (!iss._clId) return;
+          if (clChecked[iss._clId] || issueIgnored[iss._clId]) return;
+          if (!iss.pagePath || pathIndex[iss.pagePath] === undefined) return;
+          queue.push({ clId: iss._clId, pagePath: iss.pagePath, locatorId: iss.locatorId || '' });
+        });
+      });
+    });
+  });
+  // Keep navIdx pointing at roughly the same position after state changes
+  navQueue = queue;
+  navIdx = Math.min(navIdx, queue.length - 1);
+}
+
+function navStep(dir) {
+  if (!navQueue.length) return;
+  navIdx = Math.max(0, Math.min(navQueue.length - 1, navIdx + dir));
+  const item = navQueue[navIdx];
+  if (!item) return;
+  // Scroll the issue card into view and select it
+  scrollToIssueCard(item.clId);
+  setPvSelected(item.clId);
+  // Update the preview pane if it's open
+  if (document.body.classList.contains('pv-open')) {
+    openPageViewer(pathIndex[item.pagePath], item.locatorId, item.clId);
+  }
+  navUpdateUI();
+}
+
+function navUpdateUI() {
+  const counter = document.getElementById('nav-counter');
+  const prevBtn = document.getElementById('nav-prev-btn');
+  const nextBtn = document.getElementById('nav-next-btn');
+  if (!counter) return;
+  const total = navQueue.length;
+  if (total === 0) {
+    counter.innerHTML = '<strong>All issues resolved ✓</strong>';
+    prevBtn.disabled = true;
+    nextBtn.disabled = true;
+  } else {
+    const pos = navIdx >= 0 ? navIdx + 1 : '—';
+    counter.innerHTML = `Issue <strong>${pos} of ${total}</strong> open`;
+    prevBtn.disabled = navIdx <= 0;
+    nextBtn.disabled = navIdx >= total - 1;
+  }
+}
+
+// ── Module jump bar ───────────────────────────────────────────────────────
+function updateModuleJumpBar() {
+  const bar = document.getElementById('module-jump-bar');
+  const sel = document.getElementById('module-jump-select');
+  if (!bar || !sel) return;
+
+  const isModuleView = (typeof currentView !== 'undefined' && currentView === 'modules');
+  if (!isModuleView || !auditData || !auditData.byModule) {
+    bar.style.display = 'none'; return;
+  }
+  const keys = sortedModuleKeys(auditData.byModule);
+  const filtered = keys.filter(key => {
+    const pages = sortedModulePages(key, auditData.byModule[key]);
+    return currentFilter === 'all' || pages.some(p => p.findings.some(f => findingMatchesFilter(f, currentFilter)));
+  });
+  if (filtered.length < 2) { bar.style.display = 'none'; return; }
+
+  const UNATTACHED = typeof UNATTACHED_KEY !== 'undefined' ? UNATTACHED_KEY : '__unattached__';
+  sel.innerHTML = `<option value="" disabled selected>Module…</option>` +
+    filtered.map((key, i) => {
+      const display = key === UNATTACHED ? 'Unattached pages' : key;
+      return `<option value="${i}">${escHtml(display)}</option>`;
+    }).join('');
+  sel.value = '';
+  bar.style.display = 'flex';
+}
+
+function jumpToModule(idx, selectEl) {
+  const blocks = document.querySelectorAll('.module-block');
+  const block = blocks[parseInt(idx, 10)];
+  if (block) block.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  setTimeout(() => { if (selectEl) selectEl.value = ''; }, 600);
+}
+
 // Uses clTotalItems (stamped at audit time) as the denominator so the count stays
 // consistent regardless of which view is currently rendered or which accordions are open.
 function clUpdateProgress() {
@@ -3692,13 +4780,9 @@ function expandIssues() {
 // Called at the end of every renderResults() run. Shows the expand-issues button,
 // then re-applies any persisted checked states to the freshly-rendered DOM items,
 // and finally refreshes the progress bar totals.
-function showJumpButtons() {
-  document.getElementById('jump-btns').style.display = 'flex';
-}
-
-function hideJumpButtons() {
-  document.getElementById('jump-btns').style.display = 'none';
-}
+// Jump buttons are now part of the toolbar — no show/hide needed.
+function showJumpButtons() {}
+function hideJumpButtons() {}
 
 function showChecklistButton() {
   // Show/hide the expand button depending on whether there are any open issues
@@ -3731,8 +4815,30 @@ function showChecklistButton() {
         if (actions) actions.innerHTML = _issueActionBtns(id);
       });
     });
+    // Restore note text on ALL issue cards (notes are visible regardless of done/ignored state)
+    document.querySelectorAll('[id^="iss-"]').forEach(el => {
+      const id = el.id.replace(/^iss-/, '');
+      const noteWrap = el.querySelector('.issue-note-wrap');
+      if (noteWrap) {
+        // Textarea already exists — just sync the value in case it drifted
+        const ta = noteWrap.querySelector('textarea');
+        if (ta && clNotes[id] !== undefined) ta.value = clNotes[id];
+      }
+      // If the wrap is somehow missing (e.g. after a full re-render), re-inject it
+      else if (clNotes[id]) {
+        const fix = el.querySelector('.fix, .issue-fix');
+        const actions = el.querySelector('.issue-actions');
+        const target = fix || actions;
+        if (target) target.insertAdjacentHTML('beforebegin', _noteHtml(id));
+      }
+    });
     clUpdateProgress();
     clSyncAllParentIcons();
+    if (pvSelectedClId) {
+      document.querySelectorAll('[id="iss-' + pvSelectedClId + '"]').forEach(el => el.classList.add('pv-selected'));
+    }
+    navBuildQueue(); navUpdateUI();
+    updateModuleJumpBar();
   }, 50);
 }
 

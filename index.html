@@ -9,7 +9,7 @@
   --c-ink:       #0f1117;
   --c-ink-soft:  #3a3f4d;
   --c-ink-muted: #6b7280;
-  --c-ink-ghost: #9ca3af;
+  --c-ink-ghost: #6b7280;  /* was #9ca3af — darkened so informational uses pass WCAG 4.5:1 on white */
   --c-surface:   #f8f9fb;
   --c-surface-2: #f0f2f5;
   --c-surface-3: #e5e8ed;
@@ -245,14 +245,64 @@ body{
 .warn-num{color: var(--c-warn)}
 
 /* ── View toggle ──────────────────────────────────────────────────────────── */
-.view-toggle-wrap{
+/* ── Single-row sticky toolbar ───────────────────────────────────────────── */
+.toolbar{
+  border: 1px solid #bfdbfe;
+  border-radius: var(--r-lg);
+  background: #eff6ff;
+  overflow: hidden;
+  margin-bottom: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+}
+/* Bottom variant — sticks to the bottom of the scroll container */
+.toolbar-bottom{
+  top: auto;
+  bottom: 0;
+  margin-bottom: 0;
+  margin-top: 1rem;
+  box-shadow: 0 -2px 8px rgba(0,0,0,.06);
+}
+.toolbar-row{
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
+  padding: .5rem .65rem;
 }
+.toolbar-sep{
+  width: 1px;
+  height: 18px;
+  background: var(--c-border-strong);
+  flex-shrink: 0;
+  margin: 0 2px;
+}
+
+/* ── Fixed scroll shortcuts ──────────────────────────────────────────────── */
+#scroll-btns{
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 489; /* below the preview-pane slide tab (501) */
+  transition: right 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+body.results-visible #scroll-btns{ display: flex; }
+/* Shift left when the preview pane is open so buttons stay in the list pane */
+body.pv-open #scroll-btns{ right: calc(50% + 0.9rem); }
+#scroll-btns .scroll-jump-btn{
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0,0,0,.14);
+}
+@media (max-width: 900px){
+  body.pv-open #scroll-btns{ right: 1.5rem; }
+}
+
+/* ── View toggle (segmented control) ─────────────────────────────────────── */
 .view-toggle{
   display: flex;
   background: var(--c-surface-2);
@@ -402,6 +452,7 @@ body{
   user-select: none;
   gap: 8px;
   transition: background .15s;
+  flex-wrap: nowrap; /* badges must always stay on the first line */
 }
 .page-hdr:hover{ background: var(--c-surface-2); }
 .page-hdr h4{
@@ -412,6 +463,16 @@ body{
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0; /* allows the title to shrink and truncate within the flex row */
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.page-hdr .badges{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0; /* never compress — always stays on the same line as the title */
 }
 .page-body{
   padding: .5rem .9rem .7rem;
@@ -690,7 +751,7 @@ body{
 .category-heading:first-child{ margin-top: 0; }
 
 /* ── Ignore feature ───────────────────────────────────────────────────────── */
-.badge-ignore{background:var(--c-surface-3);color:var(--c-ink-ghost)}
+.badge-ignore{background:var(--c-surface-3);color:#4b5563}
 .check-item.is-ignored{opacity:.45}
 .finding-row.is-ignored{opacity:.45}
 
@@ -881,15 +942,14 @@ body.pv-open #pv-panel{
   body.pv-open #pv-panel .pv-iframe-wrap{ flex: none; height: 480px; }
 }
 
-/* ── Guided navigation bar ───────────────────────────────────────────────── */
+/* ── Guided navigation (inline in toolbar row 1) ─────────────────────────── */
 #guided-nav-bar{
-  display:none;align-items:center;gap:8px;
-  padding:.55rem .75rem;
-  background:var(--c-surface);border:1px solid var(--c-border);
-  border-radius:var(--r-md);margin-bottom:.75rem;flex-wrap:wrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 body.results-visible #guided-nav-bar{ display:flex; }
-.nav-counter{font-size:12.5px;color:var(--c-ink-muted);flex:1;text-align:center;white-space:nowrap;}
+.nav-counter{font-size:12.5px;color:var(--c-ink-soft);flex:1;text-align:center;white-space:nowrap;}
 .nav-counter strong{ color:var(--c-ink); }
 .nav-btn{
   display:inline-flex;align-items:center;gap:4px;padding:5px 11px;
@@ -904,9 +964,7 @@ body.results-visible #guided-nav-bar{ display:flex; }
 
 /* ── Module jump bar ─────────────────────────────────────────────────────── */
 #module-jump-bar{
-  display:none;gap:6px;flex-wrap:wrap;
-  padding:.45rem 0 .65rem;margin-bottom:.25rem;
-  border-bottom:1px solid var(--c-border);align-items:center;
+  display:none;gap:6px;align-items:center;
 }
 #module-jump-bar.visible{ display:flex; }
 .jump-label{
@@ -921,6 +979,16 @@ body.results-visible #guided-nav-bar{ display:flex; }
   font-family:var(--font-body);color:var(--c-ink);
   max-width:240px;
 }
+/* Restrict the module dropdown's closed-state width to ~30 characters.
+   Native <select> elements expand their option list beyond this width
+   automatically, so full module names are always readable when opened. */
+.jump-select-module{
+  max-width: 21ch; /* ~30 avg-width chars; the browser truncates the label */
+  min-width: 0;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
 .scroll-jump-btn{
   width:28px;height:28px;border-radius:var(--r-sm);
   border:1px solid var(--c-border-strong);
@@ -930,6 +998,19 @@ body.results-visible #guided-nav-bar{ display:flex; }
   flex-shrink:0;
 }
 .scroll-jump-btn:hover{ background:var(--c-surface-2);color:var(--c-ink); }
+
+/* Icon-only button */
+.icon-btn{
+  width: 30px; height: 30px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.view-btn.icon-btn{ width: 30px; height: 28px; }
+
+/* Tooltip positioning handled by JS portal (#js-tooltip appended to body) */
+
 
 /* ── Completion note ─────────────────────────────────────────────────────── */
 .issue-note-wrap{ margin-top:5px; }
@@ -1061,104 +1142,112 @@ body.results-visible #guided-nav-bar{ display:flex; }
     </div>
 
     <!-- Checklist progress bar -->
-    <div id="inline-cl-bar" style="display:none;background:white;border:1px solid var(--c-border);border-radius:var(--r-lg);padding:.65rem 1rem;margin-bottom:.85rem;display:none">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
-        <span style="font-size:14px;font-weight:500;color:var(--c-ink-soft)">Fix progress</span>
-        <div style="display:flex;align-items:center;gap:10px">
-          <span id="inline-cl-label" style="font-size:14px;font-weight:600;color:#1d4ed8">0 of 0 fixed</span>
-          <button class="btn btn-danger" onclick="clClearAll()" style="font-size:13px;padding:4px 10px">Reset progress</button>
+    <!-- Toolbar (sticky, single row) -->
+    <div class="toolbar">
+      <div class="toolbar-row">
+
+        <!-- 1. View mode -->
+        <div class="view-toggle">
+          <button class="view-btn icon-btn active" id="view-modules-btn" onclick="setView('modules')"
+            aria-label="View by module" data-tooltip="By Module">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1 2.5h4.5v4.5H1zM7.5 2.5H12v4.5H7.5zM1 8H5.5v4.5H1zM7.5 8H12v4.5H7.5z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+          </button>
+          <button class="view-btn icon-btn" id="view-checks-btn" onclick="setView('checks')"
+            aria-label="View by check type" data-tooltip="By Check Type">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x=".75" y=".75" width="11.5" height="2.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x=".75" y="5.25" width="11.5" height="2.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x=".75" y="9.75" width="11.5" height="2.5" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
+          </button>
         </div>
-      </div>
-      <div style="height:5px;border-radius:3px;background:var(--c-surface-3);overflow:hidden">
-        <div id="inline-cl-bar-fill" style="height:100%;border-radius:3px;background:var(--c-accent);width:0%;transition:width .3s ease"></div>
-      </div>
-    </div>
 
-    <!-- Guided navigation bar -->
-    <div id="guided-nav-bar">
-      <button class="nav-btn" id="nav-prev-btn" onclick="navStep(-1)" disabled>
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M7.5 2L3.5 6l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Previous
-      </button>
-      <span class="nav-counter" id="nav-counter">—</span>
-      <button class="nav-btn primary" id="nav-next-btn" onclick="navStep(1)" disabled>
-        Next issue
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4.5 2L8.5 6l-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-    </div>
-
-    <!-- View toggle + filter bar -->
-    <div class="view-toggle-wrap">
-      <div class="view-toggle">
-        <button class="view-btn active" id="view-modules-btn" onclick="setView('modules')">
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1 2.5h4.5v4.5H1zM7.5 2.5H12v4.5H7.5zM1 8H5.5v4.5H1zM7.5 8H12v4.5H7.5z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
-          By Module
-        </button>
-        <button class="view-btn" id="view-checks-btn" onclick="setView('checks')">
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x=".75" y=".75" width="11.5" height="2.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x=".75" y="5.25" width="11.5" height="2.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x=".75" y="9.75" width="11.5" height="2.5" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
-          By Check Type
-        </button>
-      </div>
-
-      <!-- Module jump dropdown — shown only in By Module view -->
-      <div id="module-jump-bar" style="display:none;align-items:center;gap:6px">
-        <span class="jump-label">Jump to</span>
-        <select id="module-jump-select" class="jump-select"
-          onchange="jumpToModule(this.value,this)" onclick="event.stopPropagation()">
-          <option value="" disabled selected>Module…</option>
+        <!-- 2. Filter -->
+        <select class="jump-select" id="filter-select" onchange="filterBySelect(this)" style="min-width:120px">
+          <option value="all">All results</option>
+          <option value="fail">Issues</option>
+          <option value="warn">Manual checks</option>
+          <option value="pass">Passed</option>
+          <option value="ignore">Ignored</option>
         </select>
-      </div>
 
-      <button class="btn" id="expand-issues-btn" onclick="expandIssues()" style="font-size:12px;white-space:nowrap;display:none" data-expanded="false">
-        <svg id="expand-issues-icon" width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 4.5l4.5 4.5 4.5-4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 1v8M2 9.5h9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-        <span id="expand-issues-label">Expand all with issues</span>
-      </button>
-      <button class="btn" id="preview-toggle-btn" onclick="togglePageViewer()" style="font-size:12px;white-space:nowrap" title="View the rendered Canvas page alongside results">
-        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" style="vertical-align:-2px;margin-right:4px"><path d="M1 7s2.2-4 6-4 6 4 6 4-2.2 4-6 4-6-4-6-4z" stroke="currentColor" stroke-width="1.2"/><circle cx="7" cy="7" r="1.6" stroke="currentColor" stroke-width="1.2"/></svg>
-        Page preview
-      </button>
-      <div class="filter-bar" id="filter-bar">
-        <button class="filter-btn active" onclick="filterResults('all',this)">All</button>
-        <button class="filter-btn" onclick="filterResults('fail',this)">Issues only</button>
-        <button class="filter-btn" onclick="filterResults('warn',this)">Manual checks</button>
-        <button class="filter-btn" onclick="filterResults('pass',this)">Passed</button>
-        <button class="filter-btn" onclick="filterResults('ignore',this)">Ignored</button>
-      </div>
+        <!-- 3. Jump to module (contextual — only in By Module view) -->
+        <div id="module-jump-bar" style="display:none;align-items:center;gap:5px">
+          <select id="module-jump-select" class="jump-select jump-select-module"
+            onchange="jumpToModule(this.value,this)" onclick="event.stopPropagation()">
+            <option value="" disabled selected>Jump to module</option>
+          </select>
+        </div>
 
-      <!-- Scroll shortcuts — always in the toolbar so they stay in the left pane -->
-      <div style="display:flex;gap:4px;margin-left:auto">
-        <button class="scroll-jump-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Jump to top">
-          <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 10L7 5l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-        <button class="scroll-jump-btn" onclick="window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})" title="Jump to bottom">
-          <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 4l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
+        <!-- 4. Guided navigation -->
+        <div id="guided-nav-bar">
+          <button class="nav-btn" id="nav-prev-btn" onclick="navStep(-1)" disabled>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M7.5 2L3.5 6l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Prev
+          </button>
+          <span class="nav-counter" id="nav-counter">—</span>
+          <button class="nav-btn primary" id="nav-next-btn" onclick="navStep(1)" disabled>
+            Next
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4.5 2L8.5 6l-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+
+        <!-- 5–7. Utility cluster pushed to the right -->
+        <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
+
+          <!-- 5. Expand/collapse -->
+          <button class="btn icon-btn" id="expand-issues-btn" onclick="expandIssues()"
+            style="display:none" data-expanded="false"
+            aria-label="Expand all sections with issues"
+            data-tooltip="Expand all with issues">
+            <svg id="expand-issues-icon" width="14" height="14" viewBox="0 0 13 13" fill="none"><path d="M2 4.5l4.5 4.5 4.5-4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 1v8M2 9.5h9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          </button>
+
+          <!-- 6. Progress circle -->
+          <div id="progress-circle-wrap" style="display:none;align-items:center;gap:5px;cursor:pointer"
+            title="Fix progress — click to reset" onclick="clClearAll()">
+            <svg width="26" height="26" viewBox="0 0 26 26">
+              <circle cx="13" cy="13" r="10" fill="none" stroke="var(--c-border-strong)" stroke-width="3"/>
+              <circle id="progress-circle-arc" cx="13" cy="13" r="10" fill="none"
+                stroke="#1d4ed8" stroke-width="3"
+                stroke-dasharray="62.8" stroke-dashoffset="62.8"
+                stroke-linecap="round" transform="rotate(-90 13 13)"
+                style="transition:stroke-dashoffset .4s ease,stroke .3s"/>
+            </svg>
+            <span id="progress-circle-label" style="font-size:11px;font-weight:600;color:#1d4ed8;white-space:nowrap"></span>
+          </div>
+
+        </div>
+
       </div>
     </div>
+
+    <!-- preview-toggle-btn is hidden but kept in DOM; JS uses it to track active state -->
+    <button id="preview-toggle-btn" style="display:none" onclick="togglePageViewer()"></button>
 
     <div id="results-layout">
       <div id="results-body"></div>
     </div>
-    <div class="actions" style="flex-wrap:nowrap">
-      <button class="btn btn-green" onclick="saveProgress()" style="white-space:nowrap">
-        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M11 3.5V10a1 1 0 01-1 1H3a1 1 0 01-1-1V3.5M4.5 1h4L10 3.5H3L4.5 1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M5 7h3M5 9h2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
-        Save progress
-      </button>
-      <div style="width:1px;background:var(--c-border-strong);align-self:stretch;margin:0 2px;flex-shrink:0"></div>
-      <button class="btn btn-blue" onclick="downloadPDF()" style="white-space:nowrap">
-        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 10.5v1.5a1 1 0 001 1h8a1 1 0 001-1v-1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M7 1v7.5M4.5 6L7 8.5 9.5 6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        PDF report
-      </button>
-      <button class="btn btn-blue" onclick="downloadSpreadsheet()" style="white-space:nowrap">
-        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 10.5v1.5a1 1 0 001 1h8a1 1 0 001-1v-1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M7 1v7.5M4.5 6L7 8.5 9.5 6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Spreadsheet
-      </button>
-      <div style="width:1px;background:var(--c-border-strong);align-self:stretch;margin:0 2px;flex-shrink:0"></div>
-      <button class="btn btn-danger" onclick="confirmReset()" style="white-space:nowrap">
-        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-        Clear &amp; restart
-      </button>
+    <!-- Sticky bottom toolbar -->
+    <div class="toolbar toolbar-bottom">
+      <div class="toolbar-row">
+        <button class="btn btn-green" onclick="saveProgress()" style="white-space:nowrap">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M11 3.5V10a1 1 0 01-1 1H3a1 1 0 01-1-1V3.5M4.5 1h4L10 3.5H3L4.5 1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M5 7h3M5 9h2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+          Save progress
+        </button>
+        <div class="toolbar-sep"></div>
+        <button class="btn btn-blue" onclick="downloadPDF()" style="white-space:nowrap">
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 10.5v1.5a1 1 0 001 1h8a1 1 0 001-1v-1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M7 1v7.5M4.5 6L7 8.5 9.5 6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          PDF report
+        </button>
+        <button class="btn btn-blue" onclick="downloadSpreadsheet()" style="white-space:nowrap">
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 10.5v1.5a1 1 0 001 1h8a1 1 0 001-1v-1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M7 1v7.5M4.5 6L7 8.5 9.5 6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Spreadsheet
+        </button>
+        <div class="toolbar-sep"></div>
+        <button class="btn btn-danger" onclick="confirmReset()" style="white-space:nowrap;margin-left:auto">
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          Clear &amp; restart
+        </button>
+      </div>
     </div>
+
   </div>
 </div>
 
@@ -1174,6 +1263,16 @@ body.results-visible #guided-nav-bar{ display:flex; }
   </svg>
   <span class="pv-tab-label">Preview</span>
 </button>
+
+<!-- Fixed scroll shortcuts: bottom-right of screen, slide left when preview pane opens -->
+<div id="scroll-btns">
+  <button class="scroll-jump-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Jump to top" aria-label="Jump to top">
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 10L7 5l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+  <button class="scroll-jump-btn" onclick="window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})" title="Jump to bottom" aria-label="Jump to bottom">
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 4l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+</div>
 
 <div id="pv-panel">
   <div class="pv-header">
@@ -1222,7 +1321,7 @@ body.results-visible #guided-nav-bar{ display:flex; }
       <h2 style="font-size:15px;font-weight:600;color:#0f1117;margin-bottom:4px">This doesn't look like a Canvas export</h2>
       <p style="font-size:14px;color:#6b7280;line-height:1.6;margin-bottom:8px">The file you uploaded doesn't contain the content expected from a Canvas course export. It may be a different type of zip file.</p>
       <p style="font-size:14px;color:#6b7280;line-height:1.6;margin-bottom:8px">To get the right file, go to your Canvas course and choose <strong>Settings → Export Course Content → Course</strong>, then upload the <strong>.imscc</strong> file that Canvas generates.</p>
-      <p id="not-canvas-error" style="display:none;font-size:12.5px;color:#9ca3af;line-height:1.5;font-family:monospace;margin-top:6px"></p>
+      <p id="not-canvas-error" style="display:none;font-size:12.5px;color:#6b7280;line-height:1.5;font-family:monospace;margin-top:6px"></p>
     </div>
   </div>
   <div style="display:flex;justify-content:flex-end">
@@ -1556,8 +1655,6 @@ async function runAudit() {
     auditData.courseTitle = courseTitle;
 
     buildPagesByPath(pages, auditData.pageBodyMap);
-    pageLocatorMap = buildPageLocatorMap(auditData);
-    pvRenderCache.clear(); // clear after locator map rebuild so fresh click-bridge script is used
     pvCurrentPath = null;
 
     // Stamp a unique _clId on every issue object so checkboxes are always distinct
@@ -1603,10 +1700,10 @@ async function runAudit() {
 
     clTotalItems = _clStamp;  // total unique checkable items across both views
 
-    // Build cross-view sync map: id → [all related ids in both views].
-    // Issues with the same locatorId or (pagePath + issue text) are the same
-    // underlying problem — marking one done should mark all of them done.
+    // Build cross-view sync map and locator→clId reverse map now that _clId is stamped
     clSyncMap = buildClSyncMap(auditData);
+    pageLocatorMap = buildPageLocatorMap(auditData); // also populates pvLocatorToClIds
+    pvRenderCache.clear();
 
     setProgress(90, 'Generating report...');
     await sleep(300);
@@ -2532,14 +2629,26 @@ function findingMatchesFilter(f, filter) {
 }
 
 // ── Filter ───────────────────────────────────────────────────────────────────
-function filterResults(f, btn) {
-  currentFilter = f;
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  // Manual checks only exist in the By Check Type view — auto-switch if needed
+function filterBySelect(sel) {
+  const f = sel.value;
   if (f === 'warn' && currentView === 'modules') {
     setView('checks');
-    return; // setView calls renderResults
+    currentFilter = f;
+    sel.value = f;
+    return;
+  }
+  currentFilter = f;
+  if (auditData) { renderResults(); updateModuleJumpBar(); }
+}
+
+// Kept for any legacy call-sites that pass a button element
+function filterResults(f, btn) {
+  currentFilter = f;
+  const sel = document.getElementById('filter-select');
+  if (sel) sel.value = f;
+  if (f === 'warn' && currentView === 'modules') {
+    setView('checks');
+    return;
   }
   if (auditData) renderResults();
 }
@@ -2677,8 +2786,8 @@ function renderSections() {
 
 function renderCheck(c, secId, checkIdx) {
   const ignoreIcon = `<svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-    <circle cx="9" cy="9" r="8.25" fill="#f3f4f6" stroke="#9ca3af" stroke-width="1.25"/>
-    <path d="M5.5 9h7" stroke="#9ca3af" stroke-width="1.6" stroke-linecap="round"/>
+    <circle cx="9" cy="9" r="8.25" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.25"/>
+    <path d="M5.5 9h7" stroke="#6b7280" stroke-width="1.6" stroke-linecap="round"/>
   </svg>`;
   const icons = {
     pass: `<svg width="18" height="18" viewBox="0 0 18 18" fill="none">
@@ -3027,7 +3136,7 @@ function renderFinding(f) {
     pass:   `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#dcfce7" stroke="#16a34a" stroke-width="1.25"/><path d="M5.5 9l2.5 2.5 4.5-4.5" stroke="#16a34a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
     fail:   `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#fee2e2" stroke="#dc2626" stroke-width="1.25"/><path d="M6 6l6 6M12 6l-6 6" stroke="#dc2626" stroke-width="1.6" stroke-linecap="round"/></svg>`,
     warn:   `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#fef3c7" stroke="#d97706" stroke-width="1.25"/><path d="M9 5.5v4" stroke="#d97706" stroke-width="1.7" stroke-linecap="round"/><circle cx="9" cy="12.5" r=".9" fill="#d97706"/></svg>`,
-    ignore: `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#f3f4f6" stroke="#9ca3af" stroke-width="1.25"/><path d="M5.5 9h7" stroke="#9ca3af" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+    ignore: `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.25"/><path d="M5.5 9h7" stroke="#6b7280" stroke-width="1.6" stroke-linecap="round"/></svg>`,
   };
 
   // Helper: per-issue buttons and state class
@@ -4396,14 +4505,14 @@ function clIsChecked(id) {
 // (both views may render the same item simultaneously), then refreshes the progress bar.
 // ── Status icons for parent-icon sync (18 px = check-type view, 14 px = module view) ──
 const _CI_PASS_18 = `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#dcfce7" stroke="#16a34a" stroke-width="1.25"/><path d="M5.5 9l2.5 2.5 4.5-4.5" stroke="#16a34a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-const _CI_IGNORE_18 = `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#f3f4f6" stroke="#9ca3af" stroke-width="1.25"/><path d="M5.5 9h7" stroke="#9ca3af" stroke-width="1.6" stroke-linecap="round"/></svg>`;
+const _CI_IGNORE_18 = `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.25"/><path d="M5.5 9h7" stroke="#6b7280" stroke-width="1.6" stroke-linecap="round"/></svg>`;
 const _CI_ICONS_18 = {
   pass: _CI_PASS_18,
   fail: `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#fee2e2" stroke="#dc2626" stroke-width="1.25"/><path d="M6 6l6 6M12 6l-6 6" stroke="#dc2626" stroke-width="1.6" stroke-linecap="round"/></svg>`,
   warn: `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#fef3c7" stroke="#d97706" stroke-width="1.25"/><path d="M9 5.5v4" stroke="#d97706" stroke-width="1.7" stroke-linecap="round"/><circle cx="9" cy="12.5" r=".9" fill="#d97706"/></svg>`,
 };
 const _CI_PASS_14 = `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#dcfce7" stroke="#16a34a" stroke-width="1.25"/><path d="M5.5 9l2.5 2.5 4.5-4.5" stroke="#16a34a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-const _CI_IGNORE_14 = `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#f3f4f6" stroke="#9ca3af" stroke-width="1.25"/><path d="M5.5 9h7" stroke="#9ca3af" stroke-width="1.6" stroke-linecap="round"/></svg>`;
+const _CI_IGNORE_14 = `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.25"/><path d="M5.5 9h7" stroke="#6b7280" stroke-width="1.6" stroke-linecap="round"/></svg>`;
 const _CI_ICONS_14 = {
   pass: _CI_PASS_14,
   fail: `<svg width="14" height="14" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8.25" fill="#fee2e2" stroke="#dc2626" stroke-width="1.25"/><path d="M6 6l6 6M12 6l-6 6" stroke="#dc2626" stroke-width="1.6" stroke-linecap="round"/></svg>`,
@@ -4683,7 +4792,7 @@ function updateModuleJumpBar() {
   if (filtered.length < 2) { bar.style.display = 'none'; return; }
 
   const UNATTACHED = typeof UNATTACHED_KEY !== 'undefined' ? UNATTACHED_KEY : '__unattached__';
-  sel.innerHTML = `<option value="" disabled selected>Module…</option>` +
+  sel.innerHTML = `<option value="" disabled selected>Jump to module</option>` +
     filtered.map((key, i) => {
       const display = key === UNATTACHED ? 'Unattached pages' : key;
       return `<option value="${i}">${escHtml(display)}</option>`;
@@ -4702,24 +4811,25 @@ function jumpToModule(idx, selectEl) {
 // Uses clTotalItems (stamped at audit time) as the denominator so the count stays
 // consistent regardless of which view is currently rendered or which accordions are open.
 function clUpdateProgress() {
-  // Use the stamped total (set at audit time) so count is accurate in both views
   const total     = clTotalItems;
   const doneCount = Object.values(clChecked).filter(Boolean).length;
-  const pct       = total ? Math.round(doneCount / total * 100) : 0;
+  const pct       = total ? doneCount / total : 0;
 
-  const bar   = document.getElementById('inline-cl-bar');
-  const fill  = document.getElementById('inline-cl-bar-fill');
-  const label = document.getElementById('inline-cl-label');
-  if (!bar) return;
+  const wrap  = document.getElementById('progress-circle-wrap');
+  const arc   = document.getElementById('progress-circle-arc');
+  const label = document.getElementById('progress-circle-label');
+  if (!wrap) return;
 
   if (total > 0) {
-    bar.style.display = 'block';
-    fill.style.width      = pct + '%';
-    fill.style.background = pct === 100 ? 'var(--c-pass)' : 'var(--c-accent)';
-    label.textContent     = `${doneCount} of ${total} fixed`;
-    label.style.color     = pct === 100 ? '#11813a' : '#1d4ed8';
+    wrap.style.display = 'flex';
+    const circumference = 62.8; // 2π × r10
+    const offset = circumference * (1 - pct);
+    arc.style.strokeDashoffset = offset;
+    arc.style.stroke = pct === 1 ? 'var(--c-pass)' : '#1d4ed8';
+    label.textContent  = `${doneCount}/${total}`;
+    label.style.color  = pct === 1 ? '#11813a' : '#1d4ed8';
   } else {
-    bar.style.display = 'none';
+    wrap.style.display = 'none';
   }
 }
 
@@ -4739,18 +4849,14 @@ function clClearAll() {
 // Toggles all result accordions that contain at least one unfixed issue.
 // First click expands them all; second click collapses them all.
 function expandIssues() {
-  const btn = document.getElementById('expand-issues-btn');
-  const label = document.getElementById('expand-issues-label');
+  const btn  = document.getElementById('expand-issues-btn');
   const icon = document.getElementById('expand-issues-icon');
   const isExpanded = btn.dataset.expanded === 'true';
 
-  // Collapse SVG (chevron up)
   const collapseSvg = '<path d="M2 8.5l4.5-4.5 4.5 4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 12V4M2 3.5h9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>';
-  // Expand SVG (chevron down)
-  const expandSvg  = '<path d="M2 4.5l4.5 4.5 4.5-4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 1v8M2 9.5h9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>';
+  const expandSvg   = '<path d="M2 4.5l4.5 4.5 4.5-4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 1v8M2 9.5h9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>';
 
   if (!isExpanded) {
-    // Expand all accordions that contain an unchecked issue
     document.querySelectorAll('.page-body, .section-body').forEach(body => {
       const hasIssue = body.querySelector('[id^="iss-"]:not(.is-done)');
       if (hasIssue) {
@@ -4761,10 +4867,10 @@ function expandIssues() {
       }
     });
     btn.dataset.expanded = 'true';
-    label.textContent = 'Collapse all';
-    icon.innerHTML = collapseSvg;
+    btn.setAttribute('aria-label', 'Collapse all sections');
+    btn.setAttribute('data-tooltip', 'Collapse all');
+    if (icon) icon.innerHTML = collapseSvg;
   } else {
-    // Collapse all accordions
     document.querySelectorAll('.page-body, .section-body').forEach(body => {
       body.style.display = 'none';
       const id = body.id.replace(/^body-/, '');
@@ -4772,8 +4878,9 @@ function expandIssues() {
       if (chev) chev.classList.add('open');
     });
     btn.dataset.expanded = 'false';
-    label.textContent = 'Expand all with issues';
-    icon.innerHTML = expandSvg;
+    btn.setAttribute('aria-label', 'Expand all sections with issues');
+    btn.setAttribute('data-tooltip', 'Expand all with issues');
+    if (icon) icon.innerHTML = expandSvg;
   }
 }
 
@@ -4790,9 +4897,9 @@ function showChecklistButton() {
   if (expandBtn) {
     expandBtn.style.display = 'inline-flex';
     expandBtn.dataset.expanded = 'false';
-    const lbl = document.getElementById('expand-issues-label');
+    expandBtn.setAttribute('aria-label', 'Expand all sections with issues');
+    expandBtn.setAttribute('data-tooltip', 'Expand all with issues');
     const ico = document.getElementById('expand-issues-icon');
-    if (lbl) lbl.textContent = 'Expand all with issues';
     if (ico) ico.innerHTML = '<path d="M2 4.5l4.5 4.5 4.5-4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 1v8M2 9.5h9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>';
   }
 
@@ -4841,5 +4948,51 @@ function showChecklistButton() {
     updateModuleJumpBar();
   }, 50);
 }
+
+// ── Portal tooltip ─────────────────────────────────────────────────────────
+// Appended to <body> so it escapes any parent overflow:hidden (e.g. .toolbar).
+// Triggered by [data-tooltip] attributes via event delegation.
+(function() {
+  let tip = null;
+  function getTip() {
+    if (!tip) {
+      tip = document.createElement('div');
+      tip.id = 'js-tooltip';
+      Object.assign(tip.style, {
+        position:'fixed', zIndex:'9999', background:'#1a1a2e', color:'white',
+        fontSize:'11px', padding:'3px 9px', borderRadius:'4px',
+        pointerEvents:'none', whiteSpace:'nowrap', opacity:'0',
+        transition:'opacity .15s', boxShadow:'0 2px 6px rgba(0,0,0,.25)',
+      });
+      document.body.appendChild(tip);
+    }
+    return tip;
+  }
+  document.addEventListener('mouseover', function(e) {
+    const el = e.target.closest('[data-tooltip]');
+    if (!el) return;
+    const text = el.getAttribute('data-tooltip');
+    if (!text) return;
+    const t = getTip();
+    t.textContent = text;
+    t.style.opacity = '0'; // measure first before showing
+    const r = el.getBoundingClientRect();
+    // Default: below the element
+    const below = r.bottom + 6;
+    const above = r.top - 30;
+    // Open downward when the element is in the upper portion of the screen
+    // (toolbar is sticky at top, so its elements are always near the top)
+    const openDown = r.top < window.innerHeight * 0.4;
+    t.style.top    = (openDown ? below : above) + 'px';
+    t.style.left   = (r.left + r.width / 2) + 'px';
+    t.style.transform = 'translateX(-50%)';
+    t.style.opacity = '1';
+  });
+  document.addEventListener('mouseout', function(e) {
+    const el = e.target.closest('[data-tooltip]');
+    if (!el || el.contains(e.relatedTarget)) return;
+    if (tip) tip.style.opacity = '0';
+  });
+})();
 
 </script>

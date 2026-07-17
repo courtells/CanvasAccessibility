@@ -1024,6 +1024,41 @@ body.results-visible #guided-nav-bar{ display:flex; }
   font-size:11.5px;color:var(--c-ink-muted);font-style:italic;
   margin-top:3px;padding:3px 6px;border-left:2px solid var(--c-border-strong);
 }
+/* ── Contrast checker modal ──────────────────────────────────────────────── */
+#ct-overlay{ display:none; }
+#ct-overlay.open{ display:flex; }
+.ct-badge{
+  text-align:center;font-size:11px;font-weight:600;
+  padding:7px 4px;border-radius:6px;
+  border:1px solid var(--c-border);
+  background:var(--c-surface-2);
+  color:var(--c-ink-muted);
+  line-height:1.4;cursor:default;
+}
+.ct-badge span{ font-size:10px;font-weight:400; }
+.ct-badge.pass{ background:var(--c-pass-bg);border-color:var(--c-pass);color:#11813a; }
+.ct-badge.fail{ background:var(--c-fail-bg);border-color:var(--c-fail);color:#b91c1c; }
+.ct-suggestion{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 10px;border-radius:8px;
+  border:1px solid var(--c-border);
+  background:var(--c-surface-2);cursor:pointer;
+  transition:background .12s;
+}
+.ct-suggestion:hover{ background:var(--c-surface-3); }
+.ct-swatch-pair{ display:flex;gap:4px;flex-shrink:0; }
+.ct-swatch{ width:22px;height:22px;border-radius:4px;border:1px solid rgba(0,0,0,.1); }
+.ct-suggestion-info{ flex:1;min-width:0; }
+.ct-suggestion-label{ font-size:12px;font-weight:500;color:var(--c-ink); }
+.ct-suggestion-hex{ font-size:11px;font-family:var(--font-mono);color:var(--c-ink-muted); }
+.ct-suggestion-ratio{ font-size:12px;font-weight:600;color:#11813a;flex-shrink:0; }
+.ct-check-btn{
+  font-size:10.5px;padding:2px 6px;border-radius:4px;
+  border:1px solid var(--c-border);background:transparent;
+  cursor:pointer;color:var(--c-ink-soft);font-family:var(--font-body);
+  white-space:nowrap;transition:background .12s;
+}
+.ct-check-btn:hover{ background:var(--c-surface-2); }
 
 </style>
 
@@ -1241,6 +1276,11 @@ body.results-visible #guided-nav-bar{ display:flex; }
           Spreadsheet
         </button>
         <div class="toolbar-sep"></div>
+        <button class="btn" onclick="openContrastTool()" style="white-space:nowrap">
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M7 4v3l2 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          Contrast checker
+        </button>
+        <div class="toolbar-sep"></div>
         <button class="btn btn-danger" onclick="confirmReset()" style="white-space:nowrap;margin-left:auto">
           <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
           Clear &amp; restart
@@ -1272,6 +1312,76 @@ body.results-visible #guided-nav-bar{ display:flex; }
   <button class="scroll-jump-btn" onclick="window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})" title="Jump to bottom" aria-label="Jump to bottom">
     <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 4l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
   </button>
+</div>
+
+<!-- ── Contrast checker modal ──────────────────────────────────────────────── -->
+<div id="ct-overlay" onclick="if(event.target===this)closeContrastTool()"
+  style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:900;align-items:center;justify-content:center">
+  <div id="ct-modal" role="dialog" aria-modal="true" aria-label="Color contrast checker"
+    style="background:white;border-radius:12px;width:min(480px,92vw);max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.1rem .75rem;border-bottom:1px solid var(--c-border)">
+      <h2 style="font-size:16px;font-weight:600;color:var(--c-ink);margin:0">Color contrast checker</h2>
+      <button onclick="closeContrastTool()" aria-label="Close"
+        style="width:28px;height:28px;border-radius:50%;border:1px solid var(--c-border-strong);background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--c-ink-soft)"
+        onmouseover="this.style.background='#fee2e2';this.style.color='#b91c1c'"
+        onmouseout="this.style.background='white';this.style.color='var(--c-ink-soft)'">
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M1.5 1.5l9 9M10.5 1.5l-9 9" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <!-- Color wells -->
+    <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;padding:1rem 1.1rem .5rem">
+      <div>
+        <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--c-ink-muted);display:block;margin-bottom:5px">Text / Object</label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="color" id="ct-fg-picker" style="width:38px;height:38px;border:1px solid var(--c-border-strong);border-radius:6px;padding:2px;cursor:pointer" oninput="ctSyncFromPicker('fg')">
+          <input type="text" id="ct-fg-hex" maxlength="7" placeholder="#000000"
+            style="flex:1;font-family:var(--font-mono);font-size:13px;padding:6px 8px;border:1px solid var(--c-border-strong);border-radius:6px"
+            oninput="ctSyncFromHex('fg')" onblur="ctNormaliseHex('fg')">
+        </div>
+      </div>
+      <button onclick="ctSwap()" title="Swap colors"
+        style="width:32px;height:32px;border-radius:50%;border:1px solid var(--c-border-strong);background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-top:18px;flex-shrink:0"
+        onmouseover="this.style.background='var(--c-surface-2)'" onmouseout="this.style.background='white'">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 3h8M4 13h8M10 1l2 2-2 2M6 11l-2 2 2 2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div>
+        <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--c-ink-muted);display:block;margin-bottom:5px">Background</label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="color" id="ct-bg-picker" style="width:38px;height:38px;border:1px solid var(--c-border-strong);border-radius:6px;padding:2px;cursor:pointer" oninput="ctSyncFromPicker('bg')">
+          <input type="text" id="ct-bg-hex" maxlength="7" placeholder="#ffffff"
+            style="flex:1;font-family:var(--font-mono);font-size:13px;padding:6px 8px;border:1px solid var(--c-border-strong);border-radius:6px"
+            oninput="ctSyncFromHex('bg')" onblur="ctNormaliseHex('bg')">
+        </div>
+      </div>
+    </div>
+
+    <!-- Preview -->
+    <div id="ct-preview" style="margin:0 1.1rem;border-radius:8px;padding:14px 16px;border:1px solid var(--c-border)">
+      <div id="ct-preview-normal" style="font-size:16px;margin-bottom:6px">The quick brown fox</div>
+      <div id="ct-preview-large" style="font-size:22px;font-weight:600">Large text sample</div>
+    </div>
+
+    <!-- Ratio -->
+    <div style="text-align:center;padding:.85rem 1.1rem .5rem">
+      <div id="ct-ratio-num" style="font-size:40px;font-weight:700;line-height:1;color:var(--c-ink)">—</div>
+      <div style="font-size:13px;color:var(--c-ink-muted);margin-top:3px">contrast ratio</div>
+    </div>
+
+    <!-- WCAG grid -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;padding:0 1.1rem .85rem">
+      <div id="ct-aa-norm" class="ct-badge">AA Normal<br><span>4.5:1</span></div>
+      <div id="ct-aa-large" class="ct-badge">AA Large<br><span>3:1</span></div>
+      <div id="ct-aaa-norm" class="ct-badge">AAA Normal<br><span>7:1</span></div>
+      <div id="ct-aaa-large" class="ct-badge">AAA Large<br><span>4.5:1</span></div>
+    </div>
+
+    <!-- Suggestions -->
+    <div id="ct-suggestions-wrap" style="border-top:1px solid var(--c-border);padding:.75rem 1.1rem 1rem">
+      <div style="font-size:12px;font-weight:600;color:var(--c-ink-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Accessible alternatives</div>
+      <div id="ct-suggestions" style="display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+  </div>
 </div>
 
 <div id="pv-panel">
@@ -2055,7 +2165,11 @@ function resolveBackground(el) {
 // Returns an array of issue objects for any elements that fail.
 function checkPageContrast(doc, loc, url, pagePath, tagEl) {
   const issues = [];
-  const TEXT_TAGS = 'p,span,div,td,th,li,h1,h2,h3,h4,h5,h6,a,strong,em,b,i,label,caption,blockquote,pre,code,small,mark,s,del,ins';
+  const TEXT_TAGS = 'p,span,div,td,th,li,h1,h2,h3,h4,h5,h6,a,' +
+    'strong,b,em,i,u,s,del,ins,mark,' +           // common inline emphasis
+    'small,sub,sup,code,pre,kbd,samp,var,' +       // typographic/code
+    'label,legend,summary,' +                       // form & disclosure labels
+    'caption,figcaption,cite,q,blockquote,dt,dd';  // semantic text containers
   const elements = doc.querySelectorAll(TEXT_TAGS);
   const seen = new Set();
 
@@ -2828,6 +2942,7 @@ function renderCheck(c, secId, checkIdx) {
            <span class="swatch-box" style="background:${i.fgHex}" title="Foreground: ${i.fgHex}"></span>
            <span style="font-size:10px;color:var(--c-ink-ghost)">FG</span>
            <span class="contrast-ratio-pill">${i.ratio}:1 (need ${i.threshold}:1)</span>
+           <button class="ct-check-btn" onclick="event.stopPropagation();openContrastTool('${i.fgHex}','${i.bgHex}')" title="Open contrast checker with these colors">Check contrast</button>
          </div>`
       : '';
     const locHtml = i.url
@@ -3161,6 +3276,7 @@ function renderFinding(f) {
            <span class="swatch-box" style="background:${iss.fgHex}"></span>
            <span style="font-size:9px;color:var(--c-ink-ghost)">FG</span>
            <span class="contrast-ratio-pill">${iss.ratio}:1 (need ${iss.threshold}:1)</span>
+           <button class="ct-check-btn" onclick="event.stopPropagation();openContrastTool('${iss.fgHex}','${iss.bgHex}')" title="Open contrast checker with these colors">Check contrast</button>
          </div>`
       : '';
     const cls = f.status === 'fail' ? 'mod-issue-item' : 'mod-warn-item';
@@ -3684,6 +3800,182 @@ function scrollToIssueCard(clId) {
 
   card.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
+
+// ── Inline contrast checker ──────────────────────────────────────────────────
+
+// Color math helpers (self-contained so they don't clash with checkPageContrast)
+function ctHexToRGB(h) {
+  h = h.replace('#','');
+  if (h.length === 3) h = h.split('').map(c=>c+c).join('');
+  return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+}
+function ctRGBToHex(r,g,b) {
+  return '#' + [r,g,b].map(v=>Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2,'0')).join('');
+}
+function ctSRGB(c) { c/=255; return c<=0.04045?c/12.92:Math.pow((c+0.055)/1.055,2.4); }
+function ctLum(r,g,b) { return 0.2126*ctSRGB(r)+0.7152*ctSRGB(g)+0.0722*ctSRGB(b); }
+function ctRatio(fgHex, bgHex) {
+  try {
+    const [r1,g1,b1]=ctHexToRGB(fgHex), [r2,g2,b2]=ctHexToRGB(bgHex);
+    const l1=ctLum(r1,g1,b1), l2=ctLum(r2,g2,b2);
+    const [hi,lo]=l1>l2?[l1,l2]:[l2,l1];
+    return (hi+0.05)/(lo+0.05);
+  } catch(e) { return 1; }
+}
+function ctHexToHSL(hex) {
+  let [r,g,b]=ctHexToRGB(hex).map(v=>v/255);
+  const max=Math.max(r,g,b), min=Math.min(r,g,b);
+  let h,s,l=(max+min)/2;
+  if (max===min) { h=s=0; } else {
+    const d=max-min;
+    s=l>0.5?d/(2-max-min):d/(max+min);
+    switch(max){case r:h=(g-b)/d+(g<b?6:0);break;case g:h=(b-r)/d+2;break;case b:h=(r-g)/d+4;break;}
+    h/=6;
+  }
+  return [h*360,s*100,l*100];
+}
+function ctHSLToHex(h,s,l) {
+  s/=100;l/=100;
+  const a=s*Math.min(l,1-l);
+  const f=n=>{const k=(n+h/30)%12;return Math.round(255*(l-a*Math.max(-1,Math.min(k-3,9-k,1))));};
+  return ctRGBToHex(f(0),f(8),f(4));
+}
+function ctValidHex(s) { return /^#?[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/.test(s.trim()); }
+function ctNorm(h) { h=h.trim(); if(!h.startsWith('#'))h='#'+h; return h.toUpperCase(); }
+
+// Binary search: find L value that just clears targetRatio, searching in direction [loL, hiL]
+function ctSearchL(baseHex, otherHex, h, s, loL, hiL, targetRatio, varyFg) {
+  for (let i=0;i<25;i++) {
+    const mid=(loL+hiL)/2;
+    const test=ctHSLToHex(h,s,mid);
+    const r=varyFg?ctRatio(test,otherHex):ctRatio(otherHex,test);
+    r>=targetRatio?(hiL=mid):(loL=mid);
+  }
+  return ctHSLToHex(h,s,hiL);
+}
+
+function ctSuggestFixes(fgHex, bgHex) {
+  const TARGET=4.5; // AA normal text
+  const results=[];
+  const [fgH,fgS,fgL]=ctHexToHSL(fgHex);
+  const [bgH,bgS,bgL]=ctHexToHSL(bgHex);
+  const current=ctRatio(fgHex,bgHex);
+  if (current>=TARGET) return results;
+
+  const addSug=(label,fg,bg)=>{
+    const r=ctRatio(fg,bg);
+    if(r>=TARGET && (fg!==fgHex||bg!==bgHex)) results.push({label,fg,bg,ratio:r});
+  };
+
+  // Darken fg
+  const darkFg=ctSearchL(fgHex,bgHex,fgH,fgS,0,fgL,TARGET,true);
+  addSug('Darken text',darkFg,bgHex);
+  // Lighten fg
+  const lightFg=ctSearchL(fgHex,bgHex,fgH,fgS,fgL,100,TARGET,true);
+  addSug('Lighten text',lightFg,bgHex);
+  // Darken bg
+  const darkBg=ctSearchL(bgHex,fgHex,bgH,bgS,0,bgL,TARGET,false);
+  addSug('Darken background',fgHex,darkBg);
+  // Lighten bg
+  const lightBg=ctSearchL(bgHex,fgHex,bgH,bgS,bgL,100,TARGET,false);
+  addSug('Lighten background',fgHex,lightBg);
+
+  return results;
+}
+
+// DOM helpers
+function ctEl(id) { return document.getElementById(id); }
+
+function ctUpdate() {
+  const fg=ctEl('ct-fg-hex').value.trim();
+  const bg=ctEl('ct-bg-hex').value.trim();
+  if (!ctValidHex(fg)||!ctValidHex(bg)) return;
+  const fgH=ctNorm(fg), bgH=ctNorm(bg);
+
+  const ratio=ctRatio(fgH,bgH);
+  const ratioStr=ratio.toFixed(2)+':1';
+
+  // Preview
+  ctEl('ct-preview').style.background=bgH;
+  ctEl('ct-preview-normal').style.color=fgH;
+  ctEl('ct-preview-large').style.color=fgH;
+
+  // Ratio display
+  const aaPass=ratio>=4.5, aaLargePass=ratio>=3, aaaPass=ratio>=7, aaaLargePass=ratio>=4.5;
+  const ratioEl=ctEl('ct-ratio-num');
+  ratioEl.textContent=ratioStr;
+  ratioEl.style.color=aaPass?'#11813a':ratio>=3?'#92400e':'#b91c1c';
+
+  // WCAG badges
+  function badge(id,pass){ const el=ctEl(id); el.classList.toggle('pass',pass); el.classList.toggle('fail',!pass); }
+  badge('ct-aa-norm',aaPass);
+  badge('ct-aa-large',aaLargePass);
+  badge('ct-aaa-norm',aaaPass);
+  badge('ct-aaa-large',aaaLargePass);
+
+  // Suggestions
+  const sugs=ctSuggestFixes(fgH,bgH);
+  const wrap=ctEl('ct-suggestions');
+  if (sugs.length===0) {
+    wrap.innerHTML=`<div style="font-size:13px;color:var(--c-ink-muted)">✓ Already meets AA for normal text (4.5:1). Try AAA (7:1) for even stronger accessibility.</div>`;
+  } else {
+    wrap.innerHTML=sugs.map(s=>`
+      <div class="ct-suggestion" onclick="ctApplySuggestion('${s.fg}','${s.bg}')">
+        <div class="ct-swatch-pair">
+          <div class="ct-swatch" style="background:${s.fg}" title="Text: ${s.fg}"></div>
+          <div class="ct-swatch" style="background:${s.bg}" title="Background: ${s.bg}"></div>
+        </div>
+        <div class="ct-suggestion-info">
+          <div class="ct-suggestion-label">${s.label}</div>
+          <div class="ct-suggestion-hex">${s.fg} on ${s.bg}</div>
+        </div>
+        <div class="ct-suggestion-ratio">${s.ratio.toFixed(2)}:1</div>
+      </div>`).join('');
+  }
+}
+
+function ctApplySuggestion(fg,bg) {
+  ctEl('ct-fg-hex').value=fg; ctEl('ct-fg-picker').value=fg;
+  ctEl('ct-bg-hex').value=bg; ctEl('ct-bg-picker').value=bg;
+  ctUpdate();
+}
+function ctSyncFromPicker(role) {
+  const picker=ctEl('ct-'+role+'-picker');
+  ctEl('ct-'+role+'-hex').value=picker.value.toUpperCase();
+  ctUpdate();
+}
+function ctSyncFromHex(role) {
+  const hex=ctEl('ct-'+role+'-hex').value.trim();
+  if (ctValidHex(hex)) {
+    const h=ctNorm(hex);
+    if (h.length===7) ctEl('ct-'+role+'-picker').value=h.toLowerCase();
+  }
+  ctUpdate();
+}
+function ctNormaliseHex(role) {
+  const inp=ctEl('ct-'+role+'-hex');
+  if (ctValidHex(inp.value)) inp.value=ctNorm(inp.value);
+}
+function ctSwap() {
+  const fg=ctEl('ct-fg-hex').value, bg=ctEl('ct-bg-hex').value;
+  ctEl('ct-fg-hex').value=bg; ctEl('ct-fg-picker').value=ctNorm(bg).toLowerCase();
+  ctEl('ct-bg-hex').value=fg; ctEl('ct-bg-picker').value=ctNorm(fg).toLowerCase();
+  ctUpdate();
+}
+function openContrastTool(fgHex, bgHex) {
+  fgHex=fgHex||'#1D4ED8'; bgHex=bgHex||'#FFFFFF';
+  ctEl('ct-fg-hex').value=fgHex.toUpperCase();
+  ctEl('ct-fg-picker').value=fgHex.toLowerCase();
+  ctEl('ct-bg-hex').value=bgHex.toUpperCase();
+  ctEl('ct-bg-picker').value=bgHex.toLowerCase();
+  ctUpdate();
+  ctEl('ct-overlay').classList.add('open');
+}
+function closeContrastTool() {
+  ctEl('ct-overlay').classList.remove('open');
+}
+// Close on Escape
+document.addEventListener('keydown', e => { if (e.key==='Escape') closeContrastTool(); });
 
 // ── PDF export ───────────────────────────────────────────────────────────────
 function downloadPDF() {
